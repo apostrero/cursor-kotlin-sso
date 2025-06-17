@@ -20,25 +20,13 @@ spring:
           lower-case-service-id: true
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
-  security:
-    saml2:
-      relyingparty:
-        registration:
-          simplesamlphp:
-            signing:
-              credentials:
-                - private-key-location: classpath:saml/saml-signing.key
-                  certificate-location: classpath:saml/saml-signing.crt
-            assertingparty:
-              metadata-uri: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
-              entity-id: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
-              verification:
-                credentials:
-                  - certificate-location: classpath:saml/idp-verification.crt
-  profiles:
-    active: dev
+  thymeleaf:
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
 
-# JWT Configuration
+# JWT Configuration (same as main profile)
 jwt:
   secret: ${JWT_SECRET:your-256-bit-secret-key-here-for-development-only}
   expiration: 3600 # 1 hour in seconds
@@ -88,4 +76,30 @@ resilience4j:
       technology-portfolio-service:
         sliding-window-size: 10
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s 
+        wait-duration-in-open-state: 30s
+
+# Mock Authentication Configuration
+mock:
+  auth:
+    enabled: true
+    login-page: /mock-login
+    success-url: /api/auth/mock-success
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER, READ_PORTFOLIO, WRITE_PORTFOLIO, VIEW_ANALYTICS]
+        email: user1@example.com
+        firstName: User1
+        lastName: MockUser
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER, READ_PORTFOLIO]
+        email: user2@example.com
+        firstName: User2
+        lastName: MockUser
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO, MANAGE_USERS, VIEW_ANALYTICS]
+        email: admin@example.com
+        firstName: Admin
+        lastName: MockUser 
