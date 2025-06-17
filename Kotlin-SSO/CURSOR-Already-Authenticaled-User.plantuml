@@ -1,0 +1,48 @@
+@startuml
+title Technology Portfolio SSO Authentication Flow - Already Authenticated User
+
+actor User as U
+participant "Web Client" as WC
+participant "API Gateway" as AG
+participant "Authentication Service" as AS
+participant "Ping Federated IdP" as PF
+participant "Authorization Service" as AuthS
+participant "Portfolio Service" as PS
+
+U -> WC: Access portfolio application
+WC -> WC: Check existing JWT token
+WC -> AG: GET /portfolio (with JWT token)
+AG -> AS: Validate JWT token
+AS -> AS: Check token expiry
+alt Token Valid and Not Expired
+    AS --> AG: Token valid + user context
+    AG -> AuthS: Check portfolio access permission
+    AuthS --> AG: Permission granted
+    AG -> PS: GET /portfolio (with user context)
+    PS --> AG: Portfolio data
+    AG --> WC: Portfolio data
+    WC --> U: Display portfolio dashboard
+else Token Expired but SSO Session Active
+    AS -> PF: Check SSO session status
+    alt SSO Session Active
+        PF --> AS: SSO session valid
+        AS -> AS: Generate new JWT token
+        AS -> AuthS: Get user permissions
+        AuthS --> AS: User roles and permissions
+        AS --> AG: New JWT token + user context
+        AG -> WC: 200 OK with new JWT token
+        WC -> WC: Update stored JWT token
+        AG -> AuthS: Check portfolio access permission
+        AuthS --> AG: Permission granted
+        AG -> PS: GET /portfolio (with user context)
+        PS --> AG: Portfolio data
+        AG --> WC: Portfolio data
+        WC --> U: Display portfolio dashboard
+    else SSO Session Expired
+        AS --> AG: 401 Unauthorized
+        AG --> WC: 302 Redirect to SSO
+        note right: Fall back to Flow 1
+    end
+end
+
+@enduml

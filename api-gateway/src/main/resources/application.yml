@@ -1,0 +1,83 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          simplesamlphp:
+            signing:
+              credentials:
+                - private-key-location: classpath:saml/saml-signing.key
+                  certificate-location: classpath:saml/saml-signing.crt
+            assertingparty:
+              metadata-uri: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+              entity-id: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
+              verification:
+                credentials:
+                  - certificate-location: classpath:saml/idp-verification.crt
+  profiles:
+    active: dev
+
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-for-development-only}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      authorization-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      technology-portfolio-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s 

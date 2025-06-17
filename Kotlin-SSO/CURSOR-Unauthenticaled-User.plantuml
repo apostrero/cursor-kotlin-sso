@@ -1,0 +1,43 @@
+@startuml
+title Technology Portfolio SSO Authentication Flow - Unauthenticated User
+
+actor User as U
+participant "Web Client" as WC
+participant "API Gateway" as AG
+participant "Authentication Service" as AS
+participant "Ping Federated IdP" as PF
+participant "Authorization Service" as AuthS
+participant "Portfolio Service" as PS
+
+U -> WC: Access portfolio application
+WC -> AG: GET /portfolio (no auth token)
+AG -> AS: Validate authentication
+AS --> AG: 401 Unauthorized
+AG --> WC: 302 Redirect to SSO
+WC -> PF: SAML Authentication Request
+PF -> U: Present login form
+U -> PF: Submit credentials
+PF -> PF: Validate credentials
+PF -> WC: SAML Response with assertion
+WC -> AG: POST /auth/saml with SAML assertion
+AG -> AS: Process SAML assertion
+AS -> PF: Validate SAML assertion
+PF --> AS: Assertion valid
+AS -> AS: Extract user attributes
+AS -> AuthS: Get user permissions
+AuthS --> AS: User roles and permissions
+AS -> AS: Generate JWT token
+AS --> AG: JWT token + user info
+AG --> WC: 200 OK with JWT token
+WC -> WC: Store JWT token
+WC -> AG: GET /portfolio (with JWT)
+AG -> AS: Validate JWT token
+AS --> AG: Token valid + user context
+AG -> AuthS: Check portfolio access permission
+AuthS --> AG: Permission granted
+AG -> PS: GET /portfolio (with user context)
+PS --> AG: Portfolio data
+AG --> WC: Portfolio data
+WC --> U: Display portfolio dashboard
+
+@enduml
