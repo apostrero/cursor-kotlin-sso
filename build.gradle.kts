@@ -19,6 +19,8 @@ allprojects {
     }
 }
 
+
+
 // Infrastructure management tasks
 tasks.register("startInfrastructure") {
     group = "application"
