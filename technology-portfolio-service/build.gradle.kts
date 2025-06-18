@@ -44,7 +44,7 @@ dependencies {
     
     // Database
     implementation("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-core:10.13.0") // Updated version for PostgreSQL 15 support
     
     // Service Discovery
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")

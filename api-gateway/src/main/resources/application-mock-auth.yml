@@ -8,18 +8,18 @@ spring:
     exclude:
       - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
       - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration
   cloud:
     config:
       enabled: false
       import-check:
         enabled: false
     gateway:
-      discovery:
-        locator:
-          enabled: true
-          lower-case-service-id: true
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
+      enabled: false  # Disable gateway in mock mode for simplicity
+  security:
+    saml2:
+      relyingparty:
+        registration: {}  # Disable SAML in mock mode
   thymeleaf:
     enabled: true
     prefix: classpath:/templates/
@@ -28,7 +28,7 @@ spring:
 
 # JWT Configuration (same as main profile)
 jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-here-for-development-only}
+  secret: ${JWT_SECRET:your-super-secret-jwt-signing-key-that-is-at-least-512-bits-long-for-HS512-algorithm-development-only-do-not-use-in-production}
   expiration: 3600 # 1 hour in seconds
 
 # Eureka Service Discovery

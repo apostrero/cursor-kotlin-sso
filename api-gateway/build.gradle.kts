@@ -39,7 +39,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.security:spring-security-saml2-service-provider")
     
-    // Web MVC for mock auth pages
+    // Web MVC for mock auth mode (gateway disabled in mock mode)
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     

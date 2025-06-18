@@ -4,21 +4,26 @@ server:
 spring:
   application:
     name: authorization-service
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
   datasource:
     url: jdbc:postgresql://localhost:5432/authorization
-    username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:password}
+    username: ${DB_USERNAME:auth_user}
+    password: ${DB_PASSWORD:auth_password}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: create-drop  # Temporarily using auto-creation instead of Flyway
     show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
   flyway:
-    enabled: true
+    enabled: false  # Temporarily disabled due to PostgreSQL 15 compatibility
     baseline-on-migrate: true
     locations: classpath:db/migration
   profiles:
