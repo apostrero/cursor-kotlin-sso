@@ -10,6 +10,32 @@ import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 import java.time.LocalDateTime
 
+/**
+ * Unit test class for the AuditServiceAdapter.
+ * 
+ * This test class verifies the behavior of the AuditServiceAdapter which handles
+ * communication with the external audit microservice via REST API calls.
+ * It tests audit event logging functionality and error handling.
+ * 
+ * Test coverage includes:
+ * - Authentication event logging to audit service
+ * - Authorization event logging for compliance
+ * - Token lifecycle event logging
+ * - Error handling when audit service is unavailable
+ * - REST API communication patterns
+ * - Event data serialization and transmission
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking RestTemplate dependencies
+ * - Tests successful audit logging scenarios
+ * - Verifies error handling and graceful degradation
+ * - Validates REST API call parameters and URLs
+ * - Ensures audit failures don't impact main operations
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
+
 class AuditServiceAdapterTest {
 
     private val restTemplate = mockk<RestTemplate>()

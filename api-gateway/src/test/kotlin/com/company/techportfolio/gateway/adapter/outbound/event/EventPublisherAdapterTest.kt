@@ -10,6 +10,33 @@ import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.RestClientException
 
+/**
+ * Unit test class for the EventPublisherAdapter.
+ * 
+ * This test class verifies the behavior of the EventPublisherAdapter which handles
+ * publishing domain events to the Spring application event system. It ensures proper
+ * event propagation for authentication, authorization, and audit operations.
+ * 
+ * Test coverage includes:
+ * - Domain event publishing via Spring ApplicationEventPublisher
+ * - Authentication event propagation (login, logout, failures)
+ * - Authorization event publishing for compliance
+ * - Token lifecycle event publishing
+ * - Error handling when event publishing fails
+ * - Event data validation and integrity
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking ApplicationEventPublisher
+ * - Tests successful event publishing scenarios
+ * - Verifies event publisher method calls and parameters
+ * - Validates event data and metadata
+ * - Ensures proper error handling for publishing failures
+ * - Tests various domain event types
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
+
 class EventPublisherAdapterTest {
 
     private val restTemplate = mockk<RestTemplate>()

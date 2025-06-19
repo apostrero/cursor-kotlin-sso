@@ -11,12 +11,48 @@ import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
 
+/**
+ * Mock authentication controller for development and testing purposes.
+ * 
+ * This controller provides mock authentication functionality when the application
+ * is running in 'mock-auth' profile. It simulates SAML SSO authentication flows
+ * without requiring external identity providers, making it ideal for development
+ * and testing environments.
+ * 
+ * Key features:
+ * - Web-based mock login page
+ * - Programmatic API authentication endpoints
+ * - Predefined test users with different roles
+ * - JWT token generation for authenticated users
+ * - User information and permission management
+ * 
+ * Available test users:
+ * - user1/password (Portfolio Manager)
+ * - user2/password (Viewer)
+ * - admin/secret (Administrator)
+ * 
+ * @property authenticationPort Port for JWT token generation and authentication operations
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 @Controller
 @Profile("mock-auth")
 class MockAuthController(
     private val authenticationPort: AuthenticationPort
 ) {
 
+    /**
+     * Displays the mock authentication login page.
+     * 
+     * This endpoint renders a web-based login form for interactive authentication
+     * during development. It supports error and logout message display.
+     * 
+     * @param error Optional error parameter to display authentication errors
+     * @param logout Optional logout parameter to display logout confirmation
+     * @param model Spring MVC model for passing data to the view
+     * @return View name for the mock login template
+     */
     @GetMapping("/mock-login")
     fun mockLoginPage(
         @RequestParam(required = false) error: String?,
@@ -28,6 +64,15 @@ class MockAuthController(
         return "mock-login"
     }
 
+    /**
+     * Handles successful mock authentication and returns user details with JWT token.
+     * 
+     * This endpoint is called after successful form-based authentication to generate
+     * JWT tokens and return user information. It extracts authentication details
+     * from the Spring Security context.
+     * 
+     * @return ResponseEntity with authentication result including JWT token and user details
+     */
     @GetMapping("/api/auth/mock-success")
     @ResponseBody
     fun mockAuthSuccess(): ResponseEntity<Map<String, Any>> {
@@ -70,6 +115,16 @@ class MockAuthController(
         )
     }
 
+    /**
+     * Handles programmatic mock authentication via API.
+     * 
+     * This endpoint allows direct authentication using username/password credentials
+     * for automated testing and API integration. It validates credentials against
+     * predefined test users and generates JWT tokens for successful authentication.
+     * 
+     * @param loginRequest Request body containing username and password
+     * @return ResponseEntity with authentication result (200 OK if successful, 400 Bad Request if failed)
+     */
     @PostMapping("/api/auth/mock-login")
     @ResponseBody
     fun mockApiLogin(
@@ -124,6 +179,15 @@ class MockAuthController(
         )
     }
 
+    /**
+     * Returns information about available mock test users.
+     * 
+     * This endpoint provides a list of predefined test users with their credentials,
+     * roles, and permissions. Useful for testing and development to understand
+     * available user accounts and their capabilities.
+     * 
+     * @return ResponseEntity with list of mock users and their details
+     */
     @GetMapping("/api/auth/mock-users")
     @ResponseBody
     fun getMockUsers(): ResponseEntity<Map<String, Any>> {
@@ -155,6 +219,19 @@ class MockAuthController(
     }
 }
 
+/**
+ * Request data class for mock authentication API login.
+ * 
+ * This data class represents the request body structure for programmatic
+ * authentication via the mock login API endpoint. It contains the necessary
+ * credentials for user authentication.
+ * 
+ * @property username The username for authentication
+ * @property password The password for authentication
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 data class MockLoginRequest(
     val username: String,
     val password: String

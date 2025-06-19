@@ -10,6 +10,22 @@ import org.springframework.context.annotation.Profile
 @Profile("!mock-auth")  // Only load when NOT in mock-auth mode
 class GatewayConfig {
 
+    /**
+     * Configures custom routing rules for the API Gateway.
+     *
+     * Defines routing rules that map incoming HTTP requests to appropriate
+     * backend microservices. Each route includes path matching, filters for
+     * request transformation, and destination service URIs.
+     *
+     * Route configuration includes:
+     * - Path-based routing with wildcard support
+     * - Path rewriting to remove API prefixes
+     * - Request header enrichment for monitoring
+     * - Load balancing through service discovery
+     *
+     * @param builder RouteLocatorBuilder for constructing routes
+     * @return RouteLocator containing all configured routes
+     */
     @Bean
     fun customRouteLocator(builder: RouteLocatorBuilder): RouteLocator {
         return builder.routes()

@@ -13,12 +13,44 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.*
 
+/**
+ * Unit test class for the JwtAuthenticationAdapter.
+ * 
+ * This test class verifies the behavior of the JwtAuthenticationAdapter which handles
+ * JWT token generation, validation, and management operations. It tests all aspects
+ * of JWT token lifecycle including creation, validation, expiration, and error handling.
+ * 
+ * Test coverage includes:
+ * - JWT token generation with various parameter combinations
+ * - Token validation for valid, expired, and invalid tokens
+ * - Token refresh operations
+ * - Username and authorities extraction from tokens
+ * - Token expiration detection and handling
+ * - Error handling for malformed and invalid tokens
+ * - Edge cases with null values and empty collections
+ * 
+ * Testing approach:
+ * - Uses reflection to set private fields for testing
+ * - Tests with known JWT secret for deterministic results
+ * - Validates JWT token structure and claims
+ * - Tests temporal aspects with manual token creation
+ * - Verifies error handling and edge cases
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 class JwtAuthenticationAdapterTest {
 
     private lateinit var jwtAuthenticationAdapter: JwtAuthenticationAdapter
     private val jwtSecret = "test-secret-key-for-jwt-testing-purposes-must-be-long-enough"
     private val jwtExpiration = 3600L
 
+    /**
+     * Sets up test fixtures before each test method.
+     * 
+     * Initializes the JwtAuthenticationAdapter and configures it with test values
+     * using reflection to set private fields. This ensures consistent test environment.
+     */
     @BeforeEach
     fun setUp() {
         jwtAuthenticationAdapter = JwtAuthenticationAdapter()
@@ -26,6 +58,19 @@ class JwtAuthenticationAdapterTest {
         ReflectionTestUtils.setField(jwtAuthenticationAdapter, "jwtExpiration", jwtExpiration)
     }
 
+    /**
+     * Tests JWT token generation with complete parameter set.
+     * 
+     * Verifies that the adapter can generate valid JWT tokens with all required
+     * claims including username, authorities, and session index. Also validates
+     * the token structure and content by parsing the generated token.
+     * 
+     * Expected behavior:
+     * - Generates non-empty JWT token
+     * - Token has correct 3-part structure (header.payload.signature)
+     * - Token contains all provided claims
+     * - Token is properly signed and parseable
+     */
     @Test
     fun `should generate valid JWT token`() {
         // Given
@@ -59,6 +104,18 @@ class JwtAuthenticationAdapterTest {
         assertNotNull(claims.expiration)
     }
 
+    /**
+     * Tests JWT token generation with null session index.
+     * 
+     * Verifies that the adapter can handle null session index values gracefully
+     * and still generate valid tokens. This is important for authentication flows
+     * that don't use session-based tracking.
+     * 
+     * Expected behavior:
+     * - Generates valid token despite null session index
+     * - Token contains null for sessionIndex claim
+     * - Other claims are populated correctly
+     */
     @Test
     fun `should generate token with null session index`() {
         // Given
@@ -84,6 +141,18 @@ class JwtAuthenticationAdapterTest {
         assertNull(claims["sessionIndex"])
     }
 
+    /**
+     * Tests JWT token generation with empty authorities list.
+     * 
+     * Verifies that the adapter can handle users with no authorities/roles
+     * and still generate valid tokens. This supports scenarios where users
+     * may have minimal or no permissions.
+     * 
+     * Expected behavior:
+     * - Generates valid token with empty authorities
+     * - Token contains empty list for authorities claim
+     * - Other claims are populated correctly
+     */
     @Test
     fun `should generate token with empty authorities`() {
         // Given
@@ -109,6 +178,18 @@ class JwtAuthenticationAdapterTest {
         assertEquals(sessionIndex, claims["sessionIndex"])
     }
 
+    /**
+     * Tests successful validation of a valid JWT token.
+     * 
+     * Verifies that the adapter can validate tokens it generates and return
+     * appropriate validation results with all user information extracted.
+     * 
+     * Expected behavior:
+     * - Returns valid TokenValidationResult
+     * - Extracts all user information correctly
+     * - Detects token is not expired
+     * - Provides issued and expiration timestamps
+     */
     @Test
     fun `should validate valid token successfully`() {
         // Given
@@ -131,6 +212,19 @@ class JwtAuthenticationAdapterTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests validation of an expired JWT token.
+     * 
+     * Verifies that the adapter correctly detects expired tokens and returns
+     * appropriate validation results. This test manually creates an expired token
+     * to test the expiration detection logic.
+     * 
+     * Expected behavior:
+     * - Returns invalid TokenValidationResult due to expiration
+     * - Extracts user information from expired token
+     * - Correctly identifies token as expired
+     * - Provides appropriate error message
+     */
     @Test
     fun `should validate expired token correctly`() {
         // Given - Create a token that's already expired
@@ -161,6 +255,18 @@ class JwtAuthenticationAdapterTest {
         assertEquals("Token has expired", result.errorMessage)
     }
 
+    /**
+     * Tests handling of tokens with invalid signatures.
+     * 
+     * Verifies that the adapter properly rejects tokens with invalid signatures
+     * and returns appropriate error responses. This is critical for security.
+     * 
+     * Expected behavior:
+     * - Returns invalid TokenValidationResult
+     * - Does not extract any user information
+     * - Provides appropriate error message
+     * - Handles security exception gracefully
+     */
     @Test
     fun `should handle invalid token signature`() {
         // Given
@@ -180,6 +286,17 @@ class JwtAuthenticationAdapterTest {
         assertTrue(result.errorMessage!!.contains("Token validation failed"))
     }
 
+    /**
+     * Tests handling of malformed JWT tokens.
+     * 
+     * Verifies that the adapter properly handles tokens that don't follow
+     * JWT format and returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns invalid TokenValidationResult
+     * - Handles parsing exception gracefully
+     * - Provides appropriate error message
+     */
     @Test
     fun `should handle malformed token`() {
         // Given
@@ -193,6 +310,17 @@ class JwtAuthenticationAdapterTest {
         assertTrue(result.errorMessage!!.contains("Token validation failed"))
     }
 
+    /**
+     * Tests username extraction from valid JWT tokens.
+     * 
+     * Verifies that the adapter can extract username information from tokens
+     * without performing full validation. This is useful for logging and auditing.
+     * 
+     * Expected behavior:
+     * - Extracts username from valid token
+     * - Returns null for invalid tokens
+     * - Handles extraction without full validation
+     */
     @Test
     fun `should extract username from valid token`() {
         // Given
@@ -206,6 +334,19 @@ class JwtAuthenticationAdapterTest {
         assertEquals(username, extractedUsername)
     }
 
+    /**
+     * Tests username extraction from invalid JWT tokens.
+     * 
+     * Verifies that the adapter gracefully handles invalid tokens when
+     * attempting to extract username information, returning null instead
+     * of throwing exceptions.
+     * 
+     * Expected behavior:
+     * - Returns null for invalid tokens
+     * - Handles parsing errors gracefully
+     * - Does not throw exceptions
+     * - Provides safe extraction for invalid input
+     */
     @Test
     fun `should return null when extracting username from invalid token`() {
         // Given
@@ -218,6 +359,19 @@ class JwtAuthenticationAdapterTest {
         assertNull(extractedUsername)
     }
 
+    /**
+     * Tests authorities extraction from valid JWT tokens.
+     * 
+     * Verifies that the adapter can extract authorities/roles information
+     * from valid tokens. This is useful for authorization decisions and
+     * user context establishment.
+     * 
+     * Expected behavior:
+     * - Extracts authorities list from valid token
+     * - Preserves authority order and content
+     * - Handles multiple authorities correctly
+     * - Provides accurate role information
+     */
     @Test
     fun `should extract authorities from valid token`() {
         // Given
@@ -231,6 +385,19 @@ class JwtAuthenticationAdapterTest {
         assertEquals(authorities, extractedAuthorities)
     }
 
+    /**
+     * Tests authorities extraction from invalid JWT tokens.
+     * 
+     * Verifies that the adapter gracefully handles invalid tokens when
+     * attempting to extract authorities information, returning null instead
+     * of throwing exceptions.
+     * 
+     * Expected behavior:
+     * - Returns null for invalid tokens
+     * - Handles parsing errors gracefully
+     * - Does not throw exceptions
+     * - Provides safe extraction for invalid input
+     */
     @Test
     fun `should return null when extracting authorities from invalid token`() {
         // Given
@@ -243,6 +410,19 @@ class JwtAuthenticationAdapterTest {
         assertNull(extractedAuthorities)
     }
 
+    /**
+     * Tests expiration detection for expired JWT tokens.
+     * 
+     * Verifies that the adapter can correctly identify tokens that have
+     * passed their expiration time. This test creates a manually expired
+     * token to test the expiration detection logic.
+     * 
+     * Expected behavior:
+     * - Correctly identifies expired tokens
+     * - Returns true for tokens past expiration time
+     * - Handles temporal comparisons accurately
+     * - Supports token lifecycle management
+     */
     @Test
     fun `should detect expired token correctly`() {
         // Given - Create an expired token
@@ -262,6 +442,18 @@ class JwtAuthenticationAdapterTest {
         assertTrue(isExpired)
     }
 
+    /**
+     * Tests expiration detection for non-expired JWT tokens.
+     * 
+     * Verifies that the adapter correctly identifies tokens that are still
+     * valid and have not reached their expiration time.
+     * 
+     * Expected behavior:
+     * - Correctly identifies non-expired tokens
+     * - Returns false for tokens within validity period
+     * - Handles temporal comparisons accurately
+     * - Supports active token validation
+     */
     @Test
     fun `should detect non-expired token correctly`() {
         // Given
@@ -274,6 +466,19 @@ class JwtAuthenticationAdapterTest {
         assertFalse(isExpired)
     }
 
+    /**
+     * Tests expiration detection for invalid JWT tokens.
+     * 
+     * Verifies that the adapter treats invalid tokens as expired for
+     * security purposes. Invalid tokens should not be considered valid
+     * regardless of their expiration status.
+     * 
+     * Expected behavior:
+     * - Treats invalid tokens as expired
+     * - Returns true for malformed tokens
+     * - Provides secure default behavior
+     * - Handles invalid input gracefully
+     */
     @Test
     fun `should return true for expired when token is invalid`() {
         // Given
@@ -286,6 +491,19 @@ class JwtAuthenticationAdapterTest {
         assertTrue(isExpired) // Invalid tokens are considered expired
     }
 
+    /**
+     * Tests successful JWT token refresh functionality.
+     * 
+     * Verifies that the adapter can refresh valid tokens by creating new
+     * tokens with updated timestamps while preserving the original claims.
+     * This is essential for maintaining user sessions.
+     * 
+     * Expected behavior:
+     * - Creates new token with fresh timestamps
+     * - Preserves original token claims
+     * - Returns different token than original
+     * - Maintains user context and permissions
+     */
     @Test
     fun `should refresh token successfully`() {
         // Given
@@ -312,6 +530,18 @@ class JwtAuthenticationAdapterTest {
         assertEquals(sessionIndex, result.sessionIndex)
     }
 
+    /**
+     * Tests token refresh failure for invalid tokens.
+     * 
+     * Verifies that the adapter gracefully handles refresh attempts on
+     * invalid tokens by returning null instead of throwing exceptions.
+     * 
+     * Expected behavior:
+     * - Returns null for invalid tokens
+     * - Does not throw exceptions
+     * - Handles invalid input gracefully
+     * - Provides safe refresh operation
+     */
     @Test
     fun `should return null when refreshing invalid token`() {
         // Given
@@ -324,6 +554,19 @@ class JwtAuthenticationAdapterTest {
         assertNull(refreshedToken)
     }
 
+    /**
+     * Tests unsupported authenticateUser method behavior.
+     * 
+     * Verifies that the adapter throws UnsupportedOperationException for
+     * the authenticateUser method, as this adapter focuses on JWT operations
+     * rather than user authentication.
+     * 
+     * Expected behavior:
+     * - Throws UnsupportedOperationException
+     * - Indicates method is not supported
+     * - Maintains clear interface boundaries
+     * - Prevents misuse of adapter
+     */
     @Test
     fun `should throw UnsupportedOperationException for authenticateUser method`() {
         // Given
@@ -335,6 +578,18 @@ class JwtAuthenticationAdapterTest {
         }
     }
 
+    /**
+     * Tests token validation with missing authorities claim.
+     * 
+     * Verifies that the adapter gracefully handles tokens that don't contain
+     * the authorities claim by defaulting to an empty authorities list.
+     * 
+     * Expected behavior:
+     * - Validates token successfully despite missing claim
+     * - Defaults to empty authorities list
+     * - Handles optional claims gracefully
+     * - Maintains backward compatibility
+     */
     @Test
     fun `should handle token validation with missing authorities claim`() {
         // Given - Create token without authorities claim
@@ -357,6 +612,18 @@ class JwtAuthenticationAdapterTest {
         assertEquals("session-123", result.sessionIndex)
     }
 
+    /**
+     * Tests token validation with missing sessionIndex claim.
+     * 
+     * Verifies that the adapter gracefully handles tokens that don't contain
+     * the sessionIndex claim by setting it to null in the validation result.
+     * 
+     * Expected behavior:
+     * - Validates token successfully despite missing claim
+     * - Sets sessionIndex to null when not present
+     * - Handles optional claims gracefully
+     * - Supports stateless authentication scenarios
+     */
     @Test
     fun `should handle token validation with missing sessionIndex claim`() {
         // Given - Create token without sessionIndex claim

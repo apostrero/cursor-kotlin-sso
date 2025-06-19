@@ -10,6 +10,33 @@ import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 
+/**
+ * Unit test class for the AuthorizationServiceAdapter.
+ * 
+ * This test class verifies the behavior of the AuthorizationServiceAdapter which handles
+ * communication with the external authorization microservice via REST API calls.
+ * It tests role-based access control (RBAC) operations and permission management.
+ * 
+ * Test coverage includes:
+ * - User authorization checks via REST API
+ * - Permission retrieval and validation
+ * - Role-based access control operations
+ * - Error handling when authorization service is unavailable
+ * - REST API communication patterns and error responses
+ * - Fallback behavior for service failures
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking RestTemplate dependencies
+ * - Tests successful authorization scenarios
+ * - Verifies error handling and graceful degradation
+ * - Validates REST API call parameters and URLs
+ * - Ensures authorization failures return appropriate responses
+ * - Tests various user permission scenarios
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
+
 class AuthorizationServiceAdapterTest {
 
     private val restTemplate = mockk<RestTemplate>()
