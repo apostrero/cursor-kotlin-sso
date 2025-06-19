@@ -3,8 +3,9 @@ plugins {
     kotlin("plugin.spring") version "1.9.22" apply false
     kotlin("plugin.jpa") version "1.9.22" apply false
     id("org.springframework.boot") version "3.4.0" apply false
-    id("io.spring.dependency-management") version "1.1.4" apply false
+    id("io.spring.dependency-management") version "1.1.6" apply false
     id("org.sonarqube") version "4.4.1.3373" apply false
+    id("org.jetbrains.kotlin.plugin.allopen") version "1.9.22" apply false
 }
 
 allprojects {
@@ -160,5 +161,63 @@ afterEvaluate {
             "-Xmx512m",
             "-Dspring.output.ansi.enabled=always"
         )
+    }
+}
+
+// Custom task to show test summary for all modules
+tasks.register("testSummary") {
+    group = "verification"
+    description = "Shows test summary for all modules"
+    
+    mustRunAfter(subprojects.map { "${it.path}:test" })
+    
+    doLast {
+        println("\n" + "=".repeat(60))
+        println("📊 TEST RESULTS SUMMARY")
+        println("=".repeat(60))
+        
+        var totalTests = 0
+        var totalFailures = 0
+        
+        subprojects.forEach { project ->
+            val testReportFile = project.file("build/reports/tests/test/index.html")
+            if (testReportFile.exists()) {
+                val content = testReportFile.readText()
+                
+                // Extract test counts using regex - looking for counter divs
+                val testPattern = """<div class="counter">([^<]+)</div>""".toRegex()
+                val matches = testPattern.findAll(content).map { it.groupValues[1] }.toList()
+                
+                if (matches.size >= 4) {
+                    val tests = matches[0].toIntOrNull() ?: 0
+                    val failures = matches[1].toIntOrNull() ?: 0
+                    val ignored = matches[2].toIntOrNull() ?: 0
+                    val duration = matches[3]
+                    val successRate = if (tests > 0) ((tests - failures) * 100 / tests) else 100
+                    
+                    totalTests += tests
+                    totalFailures += failures
+                    
+                    println("📁 ${project.name}:")
+                    println("   ✅ Tests: $tests")
+                    println("   ❌ Failures: $failures") 
+                    println("   ⏭️  Ignored: $ignored")
+                    println("   ⏱️  Duration: $duration")
+                    println("   📈 Success Rate: $successRate%")
+                    println()
+                }
+            } else {
+                println("📁 ${project.name}: No test report found")
+                println()
+            }
+        }
+        
+        val overallSuccessRate = if (totalTests > 0) ((totalTests - totalFailures) * 100 / totalTests) else 100
+        println("=".repeat(60))
+        println("🎯 OVERALL SUMMARY:")
+        println("   Total Tests: $totalTests")
+        println("   Total Failures: $totalFailures")
+        println("   Overall Success Rate: $overallSuccessRate%")
+        println("=".repeat(60))
     }
 } 

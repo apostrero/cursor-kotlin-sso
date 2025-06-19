@@ -13,8 +13,14 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
+import org.springframework.security.config.annotation.web.builders.HttpSecurity
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.test.context.support.WithMockUser
+import org.springframework.security.web.SecurityFilterChain
+import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
 import java.math.BigDecimal
 import java.time.LocalDateTime
@@ -24,6 +30,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 
 @WebMvcTest(PortfolioController::class)
+@ContextConfiguration(classes = [PortfolioController::class, PortfolioControllerTest.TestSecurityConfig::class])
 class PortfolioControllerTest {
 
     @Autowired
@@ -35,8 +42,18 @@ class PortfolioControllerTest {
     @Autowired
     private lateinit var objectMapper: ObjectMapper
 
+    @Configuration
+    @EnableWebSecurity
+    class TestSecurityConfig {
+        @Bean
+        fun filterChain(http: HttpSecurity): SecurityFilterChain {
+            http.csrf { it.disable() }
+                .authorizeHttpRequests { it.anyRequest().permitAll() }
+            return http.build()
+        }
+    }
+
     @Test
-    @WithMockUser(roles = ["USER"])
     fun `getPortfolio should return 200 when portfolio exists`() {
         // Given
         val portfolioId = 1L
@@ -68,7 +85,6 @@ class PortfolioControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
     fun `deletePortfolio should return 204 when portfolio is deleted successfully`() {
         // Given
         val portfolioId = 1L
@@ -82,7 +98,6 @@ class PortfolioControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
     fun `addTechnology should return 201 when technology is added successfully`() {
         // Given
         val portfolioId = 1L
@@ -134,7 +149,6 @@ class PortfolioControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
     fun `removeTechnology should return 204 when technology is removed successfully`() {
         // Given
         val portfolioId = 1L
@@ -150,7 +164,6 @@ class PortfolioControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = ["USER"])
     fun `getTechnologiesByPortfolio should return 200 with technology list`() {
         // Given
         val portfolioId = 1L

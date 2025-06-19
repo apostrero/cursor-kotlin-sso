@@ -21,6 +21,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     }
 }
 
+tasks.withType<Test> {
+    useJUnitPlatform()
+}
+
 dependencies {
     // Common dependencies
     implementation("org.jetbrains.kotlin:kotlin-reflect")

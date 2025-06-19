@@ -74,7 +74,10 @@ data class RoleEntity(
         joinColumns = [JoinColumn(name = "role_id")],
         inverseJoinColumns = [JoinColumn(name = "permission_id")]
     )
-    val permissions: Set<PermissionEntity> = emptySet()
+    val permissions: Set<PermissionEntity> = emptySet(),
+    
+    @ManyToMany(mappedBy = "roles", fetch = FetchType.LAZY)
+    val users: Set<UserEntity> = emptySet()
 )
 
 @Entity
@@ -100,7 +103,10 @@ data class PermissionEntity(
     val isActive: Boolean = true,
     
     @Column(name = "created_at", nullable = false)
-    val createdAt: LocalDateTime = LocalDateTime.now()
+    val createdAt: LocalDateTime = LocalDateTime.now(),
+    
+    @ManyToMany(mappedBy = "permissions", fetch = FetchType.LAZY)
+    val roles: Set<RoleEntity> = emptySet()
 ) {
     fun getPermissionString(): String = "$resource:$action"
 } 
