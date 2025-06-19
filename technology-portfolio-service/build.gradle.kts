@@ -43,8 +43,9 @@ dependencies {
     implementation("org.springframework.security:spring-security-oauth2-jose")
     
     // Database
-    implementation("org.postgresql:postgresql")
-    implementation("org.flywaydb:flyway-core")
+    implementation("org.postgresql:postgresql:42.7.4")
+    implementation("org.flywaydb:flyway-core:11.9.1")
+    implementation("org.flywaydb:flyway-database-postgresql:11.9.1")
     
     // Service Discovery
     implementation("org.springframework.cloud:spring-cloud-starter-netflix-eureka-client")

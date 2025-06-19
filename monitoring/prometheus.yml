@@ -1,0 +1,71 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  # - "first_rules.yml"
+  # - "second_rules.yml"
+
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API Gateway
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    scrape_interval: 30s
+
+  # Authorization Service
+  - job_name: 'authorization-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['authorization-service:8080']
+    scrape_interval: 30s
+
+  # Technology Portfolio Service
+  - job_name: 'technology-portfolio-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['technology-portfolio-service:8080']
+    scrape_interval: 30s
+
+  # Eureka Server
+  - job_name: 'eureka-server'
+    static_configs:
+      - targets: ['eureka-server:8761']
+    scrape_interval: 30s
+
+  # PostgreSQL Databases
+  - job_name: 'postgres-auth'
+    static_configs:
+      - targets: ['postgres-auth:5432']
+    scrape_interval: 60s
+
+  - job_name: 'postgres-portfolio'
+    static_configs:
+      - targets: ['postgres-portfolio:5432']
+    scrape_interval: 60s
+
+  # Redis
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']
+    scrape_interval: 30s
+
+  # SimpleSAMLphp IdP (only when using full SAML setup)
+  - job_name: 'identity-provider'
+    static_configs:
+      - targets: ['identity-provider:8080']
+    scrape_interval: 60s
+    metrics_path: '/simplesaml/module.php/core/frontpage_federation.php'
+    scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          # - alertmanager:9093 
