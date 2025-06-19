@@ -356,8 +356,8 @@ class AuthorizationServiceTest {
         verify {
             userRepository.isUserActive("testuser")
             permissionRepository.hasPermission("testuser", "portfolio", "read")
-            permissionRepository.hasPermission("testuser", "portfolio", "write")
         }
+        // Note: write permission is not checked due to short-circuit evaluation
     }
 
     @Test

@@ -1,0 +1,53 @@
+spring:
+  profiles:
+    active: test
+  main:
+    allow-bean-definition-overriding: true
+  cloud:
+    discovery:
+      enabled: false
+    config:
+      enabled: false
+    gateway:
+      enabled: false
+
+# Test-specific service URLs
+services:
+  authorization:
+    url: http://localhost:8081
+  audit:
+    url: http://localhost:8084
+  user-management:
+    url: http://localhost:8083
+
+# JWT settings for tests
+jwt:
+  secret: test-secret-key-for-unit-tests-only-not-for-production
+  expiration: 3600
+
+# Logging configuration for tests
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Disable actuator endpoints in tests
+management:
+  endpoints:
+    enabled-by-default: false
+  endpoint:
+    health:
+      enabled: true
+
+# Mock authentication settings
+mock-auth:
+  enabled: true
+  users:
+    - username: testuser
+      password: password
+      roles: [ROLE_USER, READ_PORTFOLIO]
+    - username: admin
+      password: secret
+      roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO] 
