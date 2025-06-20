@@ -13,6 +13,19 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.security.oauth2.jwt.Jwt
 import reactor.core.publisher.Mono
 import reactor.core.publisher.Flux
+import com.company.techportfolio.shared.domain.model.CommandResult
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.Parameter
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.ExampleObject
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import io.swagger.v3.oas.annotations.security.SecurityRequirement
+import io.swagger.v3.oas.annotations.tags.Tag
+import io.swagger.v3.oas.annotations.enums.ParameterIn
+import org.springframework.http.MediaType
+import java.time.Duration
 
 /**
  * Portfolio REST Controller - Web Adapter Layer (REACTIVE)
@@ -75,57 +88,132 @@ import reactor.core.publisher.Flux
  */
 @RestController
 @RequestMapping("/api/v1/portfolios")
+@Tag(name = "Portfolios", description = "Portfolio management operations")
+@SecurityRequirement(name = "bearerAuth")
 class PortfolioController(
     private val portfolioService: PortfolioService
 ) {
 
     /**
-     * Creates a new technology portfolio.
+     * Create a new technology portfolio
      * 
-     * Creates a new portfolio owned by the authenticated user. The owner ID
-     * is automatically extracted from the JWT token to ensure users can only
-     * create portfolios for themselves.
-     * 
-     * **HTTP Method**: POST  
-     * **Path**: `/api/v1/portfolios`  
-     * **Security**: Requires USER role  
-     * **Content-Type**: application/json
-     * **Reactive**: Returns Mono<ResponseEntity<PortfolioResponse>>
-     * 
-     * ## Request Body Example:
-     * ```json
-     * {
-     *   "name": "Enterprise Architecture Portfolio",
-     *   "description": "Technologies used in enterprise architecture",
-     *   "type": "ENTERPRISE",
-     *   "organizationId": 100
-     * }
-     * ```
-     * 
-     * ## Response Example (201 Created):
-     * ```json
-     * {
-     *   "id": 1,
-     *   "name": "Enterprise Architecture Portfolio",
-     *   "description": "Technologies used in enterprise architecture",
-     *   "type": "ENTERPRISE",
-     *   "status": "ACTIVE",
-     *   "ownerId": 42,
-     *   "organizationId": 100,
-     *   "technologyCount": 0,
-     *   "totalAnnualCost": null,
-     *   "createdAt": "2024-01-15T10:30:00",
-     *   "technologies": []
-     * }
-     * ```
-     * 
-     * @param request The portfolio creation request (validated)
-     * @param jwt The JWT token containing user authentication information
-     * @return Mono<ResponseEntity<PortfolioResponse>> with created portfolio (201) or error status
-     * @throws IllegalArgumentException if JWT subject is invalid
+     * Creates a new portfolio with the provided details and returns the created portfolio.
+     * This is a reactive endpoint that uses Mono for single result operations.
      */
     @PostMapping
-    @PreAuthorize("hasRole('USER')")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Create a new portfolio",
+        description = """
+            Creates a new technology portfolio with the provided details.
+            
+            **Reactive Operation**: Uses Mono<T> for single result handling
+            **Authentication**: Requires PORTFOLIO_MANAGER or ADMIN role
+            **Validation**: Validates portfolio name, type, and description
+            
+            ### Example Request:
+            ```json
+            {
+              "name": "Enterprise Java Applications",
+              "description": "Portfolio for enterprise Java applications and frameworks",
+              "type": "ENTERPRISE",
+              "organizationId": 1
+            }
+            ```
+        """,
+        requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Portfolio creation request",
+            required = true,
+            content = Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                schema = Schema(implementation = CreatePortfolioRequest::class),
+                examples = arrayOf(
+                    ExampleObject(
+                        name = "Enterprise Portfolio",
+                        summary = "Create an enterprise portfolio",
+                        value = """
+                        {
+                          "name": "Enterprise Java Applications",
+                          "description": "Portfolio for enterprise Java applications and frameworks",
+                          "type": "ENTERPRISE",
+                          "organizationId": 1
+                        }
+                        """
+                    ),
+                    ExampleObject(
+                        name = "Cloud Portfolio",
+                        summary = "Create a cloud portfolio",
+                        value = """
+                        {
+                          "name": "Cloud Infrastructure",
+                          "description": "Portfolio for cloud infrastructure and services",
+                          "type": "CLOUD",
+                          "organizationId": 1
+                        }
+                        """
+                    )
+                )
+            )
+        )
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "201",
+                description = "Portfolio created successfully",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = PortfolioResponse::class),
+                    examples = arrayOf(
+                        ExampleObject(
+                            name = "Created Portfolio",
+                            value = """
+                            {
+                              "id": 1,
+                              "name": "Enterprise Java Applications",
+                              "description": "Portfolio for enterprise Java applications and frameworks",
+                              "type": "ENTERPRISE",
+                              "organizationId": 1,
+                              "createdAt": "2024-01-15T10:30:00Z",
+                              "updatedAt": "2024-01-15T10:30:00Z",
+                              "technologies": []
+                            }
+                            """
+                        )
+                    )
+                )
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Invalid request data",
+                ref = "#/components/responses/ValidationError"
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "422",
+                description = "Business rule violation",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = CommandResult::class)
+                )
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
     fun createPortfolio(
         @Valid @RequestBody request: CreatePortfolioRequest,
         @AuthenticationPrincipal jwt: Jwt
@@ -148,124 +236,434 @@ class PortfolioController(
     }
 
     /**
-     * Retrieves a portfolio by its unique identifier.
+     * Get all portfolios with pagination and filtering
      * 
-     * Returns comprehensive portfolio information including all associated
-     * technologies, calculated costs, and metadata.
-     * 
-     * **HTTP Method**: GET  
-     * **Path**: `/api/v1/portfolios/{portfolioId}`  
-     * **Security**: Requires USER role
-     * **Reactive**: Returns Mono<ResponseEntity<PortfolioResponse>>
-     * 
-     * ## Response Example (200 OK):
-     * ```json
-     * {
-     *   "id": 1,
-     *   "name": "Enterprise Architecture Portfolio",
-     *   "technologyCount": 5,
-     *   "totalAnnualCost": 50000.00,
-     *   "technologies": [...]
-     * }
-     * ```
-     * 
-     * @param portfolioId The unique identifier of the portfolio
-     * @return Mono<ResponseEntity<PortfolioResponse>> with portfolio details (200) or not found (404)
+     * Retrieves a paginated list of portfolios with optional filtering.
+     * This is a reactive endpoint that uses Flux for multiple results.
      */
-    @GetMapping("/{portfolioId}")
-    @PreAuthorize("hasRole('USER')")
-    fun getPortfolio(@PathVariable portfolioId: Long): Mono<ResponseEntity<PortfolioResponse>> {
-        return portfolioService.getPortfolio(portfolioId)
-            .map { portfolio -> ResponseEntity.ok(portfolio) }
-            .onErrorResume { error ->
+    @GetMapping
+    @PreAuthorize("hasRole('VIEWER') or hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Get all portfolios",
+        description = """
+            Retrieves a paginated list of portfolios with optional filtering.
+            
+            **Reactive Operation**: Uses Flux<T> for multiple result handling
+            **Authentication**: Requires VIEWER, PORTFOLIO_MANAGER, or ADMIN role
+            **Pagination**: Supports page, size, and sort parameters
+            **Filtering**: Supports filtering by type, organization, and name
+            
+            ### Query Parameters:
+            - `page`: Page number (0-based, default: 0)
+            - `size`: Page size (default: 20, max: 100)
+            - `sort`: Sort field and direction (e.g., `name,asc`, `createdAt,desc`)
+            - `type`: Filter by portfolio type (ENTERPRISE, CLOUD, MOBILE, etc.)
+            - `organizationId`: Filter by organization ID
+            - `name`: Filter by portfolio name (partial match)
+            
+            ### Example Requests:
+            ```
+            GET /api/portfolios?page=0&size=10&sort=name,asc
+            GET /api/portfolios?type=ENTERPRISE&organizationId=1
+            GET /api/portfolios?name=Java&sort=createdAt,desc
+            ```
+        """,
+        parameters = [
+            Parameter(
+                name = "page",
+                `in` = ParameterIn.QUERY,
+                description = "Page number (0-based)",
+                schema = Schema(type = "integer", defaultValue = "0", minimum = "0")
+            ),
+            Parameter(
+                name = "size",
+                `in` = ParameterIn.QUERY,
+                description = "Page size",
+                schema = Schema(type = "integer", defaultValue = "20", minimum = "1", maximum = "100")
+            ),
+            Parameter(
+                name = "sort",
+                `in` = ParameterIn.QUERY,
+                description = "Sort field and direction (e.g., name,asc)",
+                schema = Schema(type = "string", example = "name,asc")
+            ),
+            Parameter(
+                name = "type",
+                `in` = ParameterIn.QUERY,
+                description = "Filter by portfolio type",
+                schema = Schema(type = "string", allowableValues = ["ENTERPRISE", "CLOUD", "MOBILE", "WEB", "DATA"])
+            ),
+            Parameter(
+                name = "organizationId",
+                `in` = ParameterIn.QUERY,
+                description = "Filter by organization ID",
+                schema = Schema(type = "integer")
+            ),
+            Parameter(
+                name = "name",
+                `in` = ParameterIn.QUERY,
+                description = "Filter by portfolio name (partial match)",
+                schema = Schema(type = "string")
+            )
+        ]
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Portfolios retrieved successfully",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = ArraySchema::class).items(Schema(implementation = PortfolioSummary::class)),
+                    examples = arrayOf(
+                        ExampleObject(
+                            name = "Portfolio List",
+                            value = """
+                            [
+                              {
+                                "id": 1,
+                                "name": "Enterprise Java Applications",
+                                "description": "Portfolio for enterprise Java applications",
+                                "type": "ENTERPRISE",
+                                "technologyCount": 5,
+                                "createdAt": "2024-01-15T10:30:00Z"
+                              },
+                              {
+                                "id": 2,
+                                "name": "Cloud Infrastructure",
+                                "description": "Portfolio for cloud infrastructure",
+                                "type": "CLOUD",
+                                "technologyCount": 3,
+                                "createdAt": "2024-01-15T11:00:00Z"
+                              }
+                            ]
+                            """
+                        )
+                    )
+                )
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
+    fun getAllPortfolios(
+        @RequestParam(defaultValue = "0") page: Int,
+        @RequestParam(defaultValue = "20") size: Int,
+        @RequestParam(required = false) sort: String?,
+        @RequestParam(required = false) type: String?,
+        @RequestParam(required = false) organizationId: Long?,
+        @RequestParam(required = false) name: String?
+    ): Flux<PortfolioSummary> {
+        return portfolioService.getAllPortfolios(page, size, sort, type, organizationId, name)
+            .onErrorMap { error ->
+                RuntimeException("Failed to retrieve portfolios: ${error.message}")
+            }
+    }
+
+    /**
+     * Get a specific portfolio by ID
+     * 
+     * Retrieves detailed information about a specific portfolio including its technologies.
+     * This is a reactive endpoint that uses Mono for single result operations.
+     */
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('VIEWER') or hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Get portfolio by ID",
+        description = """
+            Retrieves detailed information about a specific portfolio including its technologies.
+            
+            **Reactive Operation**: Uses Mono<T> for single result handling
+            **Authentication**: Requires VIEWER, PORTFOLIO_MANAGER, or ADMIN role
+            **Caching**: Response is cached for 5 minutes
+            
+            ### Path Parameters:
+            - `id`: Portfolio ID (required)
+            
+            ### Example Request:
+            ```
+            GET /api/portfolios/1
+            ```
+        """,
+        parameters = [
+            Parameter(
+                name = "id",
+                `in` = ParameterIn.PATH,
+                description = "Portfolio ID",
+                required = true,
+                schema = Schema(type = "integer", example = "1")
+            )
+        ]
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Portfolio retrieved successfully",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = PortfolioResponse::class),
+                    examples = arrayOf(
+                        ExampleObject(
+                            name = "Portfolio with Technologies",
+                            value = """
+                            {
+                              "id": 1,
+                              "name": "Enterprise Java Applications",
+                              "description": "Portfolio for enterprise Java applications and frameworks",
+                              "type": "ENTERPRISE",
+                              "organizationId": 1,
+                              "createdAt": "2024-01-15T10:30:00Z",
+                              "updatedAt": "2024-01-15T10:30:00Z",
+                              "technologies": [
+                                {
+                                  "id": 1,
+                                  "name": "Spring Boot",
+                                  "version": "3.2.0",
+                                  "category": "FRAMEWORK",
+                                  "status": "ACTIVE",
+                                  "maturityLevel": "MATURE",
+                                  "description": "Spring Boot framework for Java applications"
+                                }
+                              ]
+                            }
+                            """
+                        )
+                    )
+                )
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Portfolio not found",
+                ref = "#/components/responses/NotFoundError"
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
+    fun getPortfolioById(@PathVariable id: Long): Mono<PortfolioResponse> {
+        return portfolioService.getPortfolioById(id)
+            .onErrorMap { error ->
                 when (error) {
-                    is IllegalArgumentException -> 
-                        Mono.just(ResponseEntity.notFound().build())
-                    else -> 
-                        Mono.just(ResponseEntity.internalServerError().build())
+                    is IllegalArgumentException -> IllegalArgumentException("Invalid portfolio ID: ${error.message}")
+                    else -> RuntimeException("Failed to retrieve portfolio: ${error.message}")
                 }
             }
     }
 
     /**
-     * Updates an existing portfolio with partial data.
+     * Update a portfolio
      * 
-     * Allows partial updates to portfolio information. Only fields provided
-     * in the request body will be updated. The updated timestamp is
-     * automatically set to the current time.
-     * 
-     * **HTTP Method**: PUT  
-     * **Path**: `/api/v1/portfolios/{portfolioId}`  
-     * **Security**: Requires USER role  
-     * **Content-Type**: application/json
-     * **Reactive**: Returns Mono<ResponseEntity<PortfolioResponse>>
-     * 
-     * ## Request Body Example:
-     * ```json
-     * {
-     *   "name": "Updated Portfolio Name",
-     *   "status": "ARCHIVED"
-     * }
-     * ```
-     * 
-     * @param portfolioId The unique identifier of the portfolio to update
-     * @param request The update request with optional field changes (validated)
-     * @return Mono<ResponseEntity<PortfolioResponse>> with updated portfolio (200) or error status
+     * Updates an existing portfolio with the provided details.
+     * This is a reactive endpoint that uses Mono for single result operations.
      */
-    @PutMapping("/{portfolioId}")
-    @PreAuthorize("hasRole('USER')")
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Update portfolio",
+        description = """
+            Updates an existing portfolio with the provided details.
+            
+            **Reactive Operation**: Uses Mono<T> for single result handling
+            **Authentication**: Requires PORTFOLIO_MANAGER or ADMIN role
+            **Validation**: Validates portfolio data and business rules
+            
+            ### Path Parameters:
+            - `id`: Portfolio ID (required)
+            
+            ### Example Request:
+            ```json
+            {
+              "name": "Updated Enterprise Java Applications",
+              "description": "Updated description for enterprise Java applications",
+              "type": "ENTERPRISE"
+            }
+            ```
+        """,
+        parameters = [
+            Parameter(
+                name = "id",
+                `in` = ParameterIn.PATH,
+                description = "Portfolio ID",
+                required = true,
+                schema = Schema(type = "integer", example = "1")
+            )
+        ],
+        requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Portfolio update request",
+            required = true,
+            content = Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                schema = Schema(implementation = UpdatePortfolioRequest::class),
+                examples = arrayOf(
+                    ExampleObject(
+                        name = "Update Portfolio",
+                        value = """
+                        {
+                          "name": "Updated Enterprise Java Applications",
+                          "description": "Updated description for enterprise Java applications",
+                          "type": "ENTERPRISE"
+                        }
+                        """
+                    )
+                )
+            )
+        )
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Portfolio updated successfully",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = PortfolioResponse::class)
+                )
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Invalid request data",
+                ref = "#/components/responses/ValidationError"
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Portfolio not found",
+                ref = "#/components/responses/NotFoundError"
+            ),
+            ApiResponse(
+                responseCode = "422",
+                description = "Business rule violation",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = CommandResult::class)
+                )
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
     fun updatePortfolio(
-        @PathVariable portfolioId: Long,
+        @PathVariable id: Long,
         @Valid @RequestBody request: UpdatePortfolioRequest
-    ): Mono<ResponseEntity<PortfolioResponse>> {
-        return portfolioService.updatePortfolio(portfolioId, request)
-            .map { portfolio -> ResponseEntity.ok(portfolio) }
-            .onErrorResume { error ->
+    ): Mono<PortfolioResponse> {
+        return portfolioService.updatePortfolio(id, request)
+            .onErrorMap { error ->
                 when (error) {
-                    is IllegalArgumentException -> 
-                        Mono.just(ResponseEntity.badRequest().build())
-                    else -> 
-                        Mono.just(ResponseEntity.internalServerError().build())
+                    is IllegalArgumentException -> IllegalArgumentException("Invalid portfolio data: ${error.message}")
+                    else -> RuntimeException("Failed to update portfolio: ${error.message}")
                 }
             }
     }
 
     /**
-     * Deletes a portfolio by its unique identifier.
+     * Delete a portfolio
      * 
-     * Permanently deletes a portfolio. The portfolio must be empty (no technologies)
-     * before it can be deleted to maintain data integrity.
-     * 
-     * **HTTP Method**: DELETE  
-     * **Path**: `/api/v1/portfolios/{portfolioId}`  
-     * **Security**: Requires USER role
-     * **Reactive**: Returns Mono<ResponseEntity<Void>>
-     * 
-     * ## Business Rules:
-     * - Portfolio must exist
-     * - Portfolio must be empty (no technologies)
-     * - Deletion is permanent and cannot be undone
-     * 
-     * @param portfolioId The unique identifier of the portfolio to delete
-     * @return Mono<ResponseEntity<Void>> with no content (204) if successful, not found (404) if failed
+     * Deletes a portfolio and all its associated technologies.
+     * This is a reactive endpoint that uses Mono for single result operations.
      */
-    @DeleteMapping("/{portfolioId}")
-    @PreAuthorize("hasRole('USER')")
-    fun deletePortfolio(@PathVariable portfolioId: Long): Mono<ResponseEntity<Void>> {
-        return portfolioService.deletePortfolio(portfolioId)
-            .map<ResponseEntity<Void>> { deleted ->
-                if (deleted) {
-                    ResponseEntity.noContent().build()
-                } else {
-                    ResponseEntity.notFound().build()
-                }
-            }
-            .onErrorResume { error ->
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(
+        summary = "Delete portfolio",
+        description = """
+            Deletes a portfolio and all its associated technologies.
+            
+            **Reactive Operation**: Uses Mono<T> for single result handling
+            **Authentication**: Requires ADMIN role
+            **Cascade**: Deletes all associated technologies and assessments
+            
+            ### Path Parameters:
+            - `id`: Portfolio ID (required)
+            
+            ### Example Request:
+            ```
+            DELETE /api/portfolios/1
+            ```
+        """,
+        parameters = [
+            Parameter(
+                name = "id",
+                `in` = ParameterIn.PATH,
+                description = "Portfolio ID",
+                required = true,
+                schema = Schema(type = "integer", example = "1")
+            )
+        ]
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "204",
+                description = "Portfolio deleted successfully"
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Portfolio not found",
+                ref = "#/components/responses/NotFoundError"
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
+    fun deletePortfolio(@PathVariable id: Long): Mono<ResponseEntity<Void>> {
+        return portfolioService.deletePortfolio(id)
+            .then(Mono.just(ResponseEntity.noContent().build()))
+            .onErrorMap { error ->
                 when (error) {
-                    is IllegalArgumentException -> 
-                        Mono.just(ResponseEntity.badRequest().build())
-                    else -> 
-                        Mono.just(ResponseEntity.internalServerError().build())
+                    is IllegalArgumentException -> IllegalArgumentException("Invalid portfolio ID: ${error.message}")
+                    else -> RuntimeException("Failed to delete portfolio: ${error.message}")
                 }
             }
     }
@@ -421,19 +819,132 @@ class PortfolioController(
      * @return Mono<ResponseEntity<TechnologyResponse>> with created technology (201) or error status
      */
     @PostMapping("/{portfolioId}/technologies")
-    @PreAuthorize("hasRole('USER')")
-    fun addTechnology(
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Add technology to portfolio",
+        description = """
+            Adds a new technology to an existing portfolio.
+            
+            **Reactive Operation**: Uses Mono<T> for single result handling
+            **Authentication**: Requires PORTFOLIO_MANAGER or ADMIN role
+            **Validation**: Validates technology data and portfolio existence
+            
+            ### Path Parameters:
+            - `portfolioId`: Portfolio ID (required)
+            
+            ### Example Request:
+            ```json
+            {
+              "name": "Spring Boot",
+              "version": "3.2.0",
+              "category": "FRAMEWORK",
+              "description": "Spring Boot framework for Java applications",
+              "maturityLevel": "MATURE",
+              "status": "ACTIVE"
+            }
+            ```
+        """,
+        parameters = [
+            Parameter(
+                name = "portfolioId",
+                `in` = ParameterIn.PATH,
+                description = "Portfolio ID",
+                required = true,
+                schema = Schema(type = "integer", example = "1")
+            )
+        ],
+        requestBody = io.swagger.v3.oas.annotations.parameters.RequestBody(
+            description = "Technology creation request",
+            required = true,
+            content = Content(
+                mediaType = MediaType.APPLICATION_JSON_VALUE,
+                schema = Schema(implementation = AddTechnologyRequest::class),
+                examples = arrayOf(
+                    ExampleObject(
+                        name = "Add Framework",
+                        value = """
+                        {
+                          "name": "Spring Boot",
+                          "version": "3.2.0",
+                          "category": "FRAMEWORK",
+                          "description": "Spring Boot framework for Java applications",
+                          "maturityLevel": "MATURE",
+                          "status": "ACTIVE"
+                        }
+                        """
+                    ),
+                    ExampleObject(
+                        name = "Add Database",
+                        value = """
+                        {
+                          "name": "PostgreSQL",
+                          "version": "15.0",
+                          "category": "DATABASE",
+                          "description": "PostgreSQL relational database",
+                          "maturityLevel": "MATURE",
+                          "status": "ACTIVE"
+                        }
+                        """
+                    )
+                )
+            )
+        )
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "201",
+                description = "Technology added successfully",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = TechnologyResponse::class)
+                )
+            ),
+            ApiResponse(
+                responseCode = "400",
+                description = "Invalid request data",
+                ref = "#/components/responses/ValidationError"
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "404",
+                description = "Portfolio not found",
+                ref = "#/components/responses/NotFoundError"
+            ),
+            ApiResponse(
+                responseCode = "422",
+                description = "Business rule violation",
+                content = Content(
+                    mediaType = MediaType.APPLICATION_JSON_VALUE,
+                    schema = Schema(implementation = CommandResult::class)
+                )
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
+    fun addTechnologyToPortfolio(
         @PathVariable portfolioId: Long,
         @Valid @RequestBody request: AddTechnologyRequest
-    ): Mono<ResponseEntity<TechnologyResponse>> {
-        return portfolioService.addTechnology(portfolioId, request)
-            .map { technology -> ResponseEntity.status(HttpStatus.CREATED).body(technology) }
-            .onErrorResume { error ->
+    ): Mono<TechnologyResponse> {
+        return portfolioService.addTechnologyToPortfolio(portfolioId, request)
+            .onErrorMap { error ->
                 when (error) {
-                    is IllegalArgumentException -> 
-                        Mono.just(ResponseEntity.badRequest().build())
-                    else -> 
-                        Mono.just(ResponseEntity.internalServerError().build())
+                    is IllegalArgumentException -> IllegalArgumentException("Invalid technology data: ${error.message}")
+                    else -> RuntimeException("Failed to add technology: ${error.message}")
                 }
             }
     }
@@ -604,35 +1115,77 @@ class PortfolioController(
     }
 
     /**
-     * Streams all portfolios as Server-Sent Events (SSE).
+     * Stream portfolios in real-time
      * 
-     * Returns a Flux stream of all portfolios as Server-Sent Events for real-time
-     * streaming. This endpoint demonstrates advanced Flux<T> usage with SSE
-     * for live data streaming and reactive backpressure handling.
-     * 
-     * **HTTP Method**: GET  
-     * **Path**: `/api/v1/portfolios/stream`  
-     * **Security**: Requires ADMIN role
-     * **Content-Type**: text/event-stream
-     * **Reactive**: Returns Flux<PortfolioSummary> as Server-Sent Events
-     * 
-     * ## SSE Response Format:
-     * ```
-     * data: {"id":1,"name":"Portfolio 1","type":"ENTERPRISE"}
-     * 
-     * data: {"id":2,"name":"Portfolio 2","type":"DEVELOPMENT"}
-     * 
-     * ```
-     * 
-     * @return Flux<PortfolioSummary> as Server-Sent Events stream
+     * Streams portfolio updates in real-time using Server-Sent Events (SSE).
+     * This is a reactive streaming endpoint that uses Flux for continuous data flow.
      */
-    @GetMapping(value = ["/stream"], produces = ["text/event-stream"])
-    @PreAuthorize("hasRole('ADMIN')")
-    fun streamAllPortfolios(): Flux<PortfolioSummary> {
-        return portfolioService.searchPortfolios(null, null, null, null)
-            .onErrorResume { error ->
-                println("Error streaming portfolios: ${error.message}")
-                Flux.empty()
+    @GetMapping(value = ["/stream"], produces = [MediaType.TEXT_EVENT_STREAM_VALUE])
+    @PreAuthorize("hasRole('VIEWER') or hasRole('PORTFOLIO_MANAGER') or hasRole('ADMIN')")
+    @Operation(
+        summary = "Stream portfolios in real-time",
+        description = """
+            Streams portfolio updates in real-time using Server-Sent Events (SSE).
+            
+            **Reactive Streaming**: Uses Flux<T> for continuous data flow
+            **Authentication**: Requires VIEWER, PORTFOLIO_MANAGER, or ADMIN role
+            **Real-time**: Provides live updates as portfolios change
+            **SSE**: Uses Server-Sent Events for browser compatibility
+            
+            ### Headers:
+            - `Accept: text/event-stream`
+            - `Cache-Control: no-cache`
+            - `Connection: keep-alive`
+            
+            ### Example Response:
+            ```
+            data: {"id": 1, "name": "Enterprise Java", "type": "ENTERPRISE", "updatedAt": "2024-01-15T10:30:00Z"}
+            
+            data: {"id": 2, "name": "Cloud Infrastructure", "type": "CLOUD", "updatedAt": "2024-01-15T10:31:00Z"}
+            ```
+        """
+    )
+    @ApiResponses(
+        value = [
+            ApiResponse(
+                responseCode = "200",
+                description = "Portfolio stream started",
+                content = Content(
+                    mediaType = MediaType.TEXT_EVENT_STREAM_VALUE,
+                    examples = arrayOf(
+                        ExampleObject(
+                            name = "SSE Stream",
+                            value = """
+                            data: {"id": 1, "name": "Enterprise Java", "type": "ENTERPRISE", "updatedAt": "2024-01-15T10:30:00Z"}
+                            
+                            data: {"id": 2, "name": "Cloud Infrastructure", "type": "CLOUD", "updatedAt": "2024-01-15T10:31:00Z"}
+                            """
+                        )
+                    )
+                )
+            ),
+            ApiResponse(
+                responseCode = "401",
+                description = "Authentication required",
+                ref = "#/components/responses/UnauthorizedError"
+            ),
+            ApiResponse(
+                responseCode = "403",
+                description = "Insufficient permissions",
+                ref = "#/components/responses/ForbiddenError"
+            ),
+            ApiResponse(
+                responseCode = "500",
+                description = "Internal server error",
+                ref = "#/components/responses/ServerError"
+            )
+        ]
+    )
+    fun streamPortfolios(): Flux<PortfolioSummary> {
+        return portfolioService.streamPortfolios()
+            .delayElements(Duration.ofSeconds(1)) // Simulate real-time updates
+            .onErrorMap { error ->
+                RuntimeException("Failed to stream portfolios: ${error.message}")
             }
     }
 
