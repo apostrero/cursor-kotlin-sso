@@ -3,6 +3,42 @@ package com.company.techportfolio.authorization.domain.model
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
+/**
+ * Authorization Request Test Suite - Domain Model Unit Tests
+ *
+ * This test class provides comprehensive unit testing for the AuthorizationRequest domain model,
+ * which represents incoming authorization check requests in the authorization service.
+ * The tests validate data class behavior, parameter handling, and edge cases.
+ *
+ * ## Test Strategy:
+ * - **Data Class Testing**: Constructor, equality, hashCode, toString, and copy functionality
+ * - **Parameter Validation**: Username, resource, action, and context handling
+ * - **Edge Case Coverage**: Empty values, special characters, Unicode support
+ * - **Context Testing**: Complex context maps with various data types
+ * - **Business Logic**: Default values and optional parameters
+ *
+ * ## Test Coverage:
+ * - Constructor variations (with and without context)
+ * - Parameter validation (username, resource, action)
+ * - Context map handling (empty, simple, complex nested structures)
+ * - Special character and Unicode support
+ * - Data class contract verification (equals, hashCode, toString, copy)
+ * - Edge cases (empty strings, null-like values)
+ *
+ * ## Domain Context:
+ * AuthorizationRequest represents the input to authorization decisions, containing
+ * the user identity, requested resource, intended action, and optional contextual
+ * information that may influence the authorization decision.
+ *
+ * ## Authorization Flow:
+ * This model is typically created from HTTP requests and passed to the authorization
+ * service for processing. The context map allows for flexible authorization rules
+ * based on additional information like organization, department, or resource metadata.
+ *
+ * @author Technology Portfolio Team
+ * @version 1.0
+ * @since 1.0
+ */
 class AuthorizationRequestTest {
 
     @Test

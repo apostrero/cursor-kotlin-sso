@@ -134,10 +134,14 @@ CursorKotlinSSO/
 │   ├── src/main/kotlin/com/company/techportfolio/portfolio/
 │   │   ├── domain/                       # Domain Layer
 │   │   │   ├── model/                    # Domain Models
-│   │   │   │   ├── PortfolioRequest.kt
-│   │   │   │   ├── TechnologyRequest.kt
+│   │   │   │   ├── CreatePortfolioRequest.kt
+│   │   │   │   ├── UpdatePortfolioRequest.kt
+│   │   │   │   ├── AddTechnologyRequest.kt
+│   │   │   │   ├── UpdateTechnologyRequest.kt
 │   │   │   │   ├── PortfolioResponse.kt
-│   │   │   │   └── TechnologyResponse.kt
+│   │   │   │   ├── TechnologyResponse.kt
+│   │   │   │   ├── PortfolioSummary.kt
+│   │   │   │   └── TechnologySummary.kt
 │   │   │   ├── port/                     # Ports (Interfaces)
 │   │   │   │   ├── PortfolioRepository.kt
 │   │   │   │   ├── TechnologyRepository.kt
@@ -196,15 +200,14 @@ CursorKotlinSSO/
 │   │   │   │       ├── AssessmentStatus.kt
 │   │   │   │       ├── DependencyType.kt
 │   │   │   │       └── DependencyStrength.kt
-│   │   │   ├── port/                     # Shared Repository Ports & CQRS Base
-│   │   │   │   ├── UserRepository.kt
-│   │   │   │   ├── PortfolioRepository.kt
-│   │   │   │   ├── EventPublisher.kt
+│   │   │   ├── port/                     # Shared CQRS Base & Cross-Service Interfaces
+│   │   │   │   ├── UserRepository.kt     # Used by authorization + api-gateway
+│   │   │   │   ├── EventPublisher.kt     # Shared infrastructure interface
 │   │   │   │   ├── Command.kt            # Base Command class
 │   │   │   │   ├── Query.kt              # Base Query class
 │   │   │   │   ├── CommandResult.kt      # Command result wrapper
 │   │   │   │   ├── CommandHandler.kt     # CQRS interfaces & buses
-│   │   │   │   ├── UserCommands.kt       # User-related commands
+│   │   │   │   ├── CreateUserCommand.kt  # User creation command
 │   │   │   │   ├── BasicPortfolioCommands.kt # Basic portfolio commands
 │   │   │   │   └── BasicQueries.kt       # Basic queries
 │   │   │   ├── event/                    # Domain Events (Individual Files)

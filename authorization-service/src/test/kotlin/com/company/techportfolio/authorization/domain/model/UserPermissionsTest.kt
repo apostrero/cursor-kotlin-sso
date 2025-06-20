@@ -3,6 +3,41 @@ package com.company.techportfolio.authorization.domain.model
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
+/**
+ * User Permissions Test Suite - Domain Model Unit Tests
+ *
+ * This test class provides comprehensive unit testing for the UserPermissions domain model,
+ * focusing on data class behavior, constructor variations, property validation, and
+ * edge case handling for the authorization domain.
+ *
+ * ## Test Strategy:
+ * - **Data Class Testing**: Constructor, equality, hashCode, toString, and copy functionality
+ * - **Property Validation**: All property types and constraints
+ * - **Edge Case Coverage**: Empty values, null handling, special characters, Unicode support
+ * - **Boundary Testing**: Large datasets, extreme values, and limits
+ * - **Business Logic**: Default values and optional parameters
+ *
+ * ## Test Coverage:
+ * - Constructor variations (full parameters vs defaults)
+ * - Property validation (username, permissions, roles, organizationId, isActive)
+ * - Special character and Unicode handling
+ * - Large dataset handling (many permissions/roles)
+ * - Organization ID edge cases (null, zero, negative, max values)
+ * - Data class contract verification (equals, hashCode, toString, copy)
+ *
+ * ## Domain Context:
+ * UserPermissions represents the complete authorization context for a user,
+ * including their permissions, roles, organizational scope, and activation status.
+ * This is a critical domain model for authorization decisions.
+ *
+ * ## Usage in Authorization:
+ * This model is used throughout the authorization service to represent a user's
+ * complete permission profile for access control decisions.
+ *
+ * @author Technology Portfolio Team
+ * @version 1.0
+ * @since 1.0
+ */
 class UserPermissionsTest {
 
     @Test

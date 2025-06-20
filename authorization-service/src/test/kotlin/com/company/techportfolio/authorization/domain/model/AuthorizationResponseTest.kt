@@ -3,6 +3,48 @@ package com.company.techportfolio.authorization.domain.model
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
+/**
+ * Authorization Response Test Suite - Domain Model Unit Tests
+ *
+ * This test class provides comprehensive unit testing for the AuthorizationResponse domain model,
+ * which represents the result of authorization decisions in the authorization service.
+ * The tests validate data class behavior, factory methods, and response variations.
+ *
+ * ## Test Strategy:
+ * - **Data Class Testing**: Constructor, equality, hashCode, toString functionality
+ * - **Factory Method Testing**: Companion object authorized() and unauthorized() methods
+ * - **Response Validation**: Success and failure scenarios with proper data
+ * - **Parameter Handling**: Optional parameters and default values
+ * - **Edge Case Coverage**: Empty values, special characters, Unicode support
+ *
+ * ## Test Coverage:
+ * - Factory method variations (authorized/unauthorized with different parameters)
+ * - Direct constructor usage
+ * - Parameter validation (isAuthorized, username, resource, action, permissions, roles)
+ * - Error message handling for unauthorized responses
+ * - Organization context handling
+ * - Special character and Unicode support
+ * - Data class contract verification
+ *
+ * ## Domain Context:
+ * AuthorizationResponse represents the output of authorization decisions, containing
+ * the authorization result, user context, granted permissions, assigned roles, and
+ * any error information for failed authorization attempts.
+ *
+ * ## Authorization Flow:
+ * This model is returned by the authorization service and typically converted to
+ * HTTP responses. It provides complete information about the authorization decision
+ * including the reasoning (permissions/roles) and any error details.
+ *
+ * ## Factory Methods:
+ * The companion object provides convenient factory methods:
+ * - `authorized()`: Creates successful authorization responses
+ * - `unauthorized()`: Creates failed authorization responses with error details
+ *
+ * @author Technology Portfolio Team
+ * @version 1.0
+ * @since 1.0
+ */
 class AuthorizationResponseTest {
 
     @Test
