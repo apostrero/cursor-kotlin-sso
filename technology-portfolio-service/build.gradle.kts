@@ -80,6 +80,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("com.h2database:h2")
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
 }
 
 dependencyManagement {

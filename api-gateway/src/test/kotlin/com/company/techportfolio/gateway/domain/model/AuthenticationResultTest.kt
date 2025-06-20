@@ -4,8 +4,45 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 import java.time.LocalDateTime
 
+/**
+ * Unit test class for the AuthenticationResult domain model.
+ * 
+ * This test class verifies the behavior of the AuthenticationResult data class
+ * which represents the outcome of authentication operations in the system.
+ * It tests all factory methods, constructors, and data class functionality.
+ * 
+ * Test coverage includes:
+ * - Success authentication result creation
+ * - Failure authentication result creation
+ * - Not authenticated result creation
+ * - Constructor and default parameter handling
+ * - Data class equality, hashCode, and toString
+ * - Copy functionality for immutable updates
+ * - Edge cases with null values
+ * 
+ * Testing approach:
+ * - Tests all companion object factory methods
+ * - Validates data class properties and behavior
+ * - Verifies immutability and functional programming patterns
+ * - Tests edge cases and boundary conditions
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 class AuthenticationResultTest {
 
+    /**
+     * Tests successful authentication result creation using factory method.
+     * 
+     * Verifies that the success factory method creates an AuthenticationResult
+     * with all required properties set correctly for successful authentication.
+     * 
+     * Expected behavior:
+     * - Sets isAuthenticated to true
+     * - Populates all user-related properties
+     * - Sets errorMessage to null
+     * - Preserves all input parameters
+     */
     @Test
     fun `should create successful authentication result`() {
         // Given
@@ -34,6 +71,18 @@ class AuthenticationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests failure authentication result creation using factory method.
+     * 
+     * Verifies that the failure factory method creates an AuthenticationResult
+     * with appropriate properties set for failed authentication scenarios.
+     * 
+     * Expected behavior:
+     * - Sets isAuthenticated to false
+     * - Sets all user-related properties to null or empty
+     * - Populates errorMessage with failure reason
+     * - Provides clear failure indication
+     */
     @Test
     fun `should create failure authentication result`() {
         // Given
@@ -52,6 +101,18 @@ class AuthenticationResultTest {
         assertEquals(errorMessage, result.errorMessage)
     }
 
+    /**
+     * Tests not authenticated result creation using factory method.
+     * 
+     * Verifies that the notAuthenticated factory method creates an AuthenticationResult
+     * with neutral state indicating no authentication attempt was made.
+     * 
+     * Expected behavior:
+     * - Sets isAuthenticated to false
+     * - Sets all properties to null or empty
+     * - Does not include error message (different from failure)
+     * - Represents neutral/initial state
+     */
     @Test
     fun `should create not authenticated result`() {
         // When
@@ -67,6 +128,17 @@ class AuthenticationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests direct constructor usage with all parameters.
+     * 
+     * Verifies that the primary constructor can be used directly to create
+     * AuthenticationResult instances with custom parameter combinations.
+     * 
+     * Expected behavior:
+     * - Accepts all parameters directly
+     * - Preserves all input values
+     * - Provides flexibility for custom scenarios
+     */
     @Test
     fun `should create authentication result with constructor`() {
         // Given
@@ -99,6 +171,17 @@ class AuthenticationResultTest {
         assertEquals(errorMessage, result.errorMessage)
     }
 
+    /**
+     * Tests constructor with default parameter values.
+     * 
+     * Verifies that the constructor properly handles default values
+     * when only required parameters are provided.
+     * 
+     * Expected behavior:
+     * - Uses default values for optional parameters
+     * - Creates valid instance with minimal input
+     * - Demonstrates proper default parameter handling
+     */
     @Test
     fun `should create authentication result with default values`() {
         // When
@@ -114,6 +197,18 @@ class AuthenticationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests data class equality and hashCode implementation.
+     * 
+     * Verifies that the data class properly implements equality comparison
+     * and hashCode generation based on all properties.
+     * 
+     * Expected behavior:
+     * - Equal objects have same property values
+     * - Equal objects have same hashCode
+     * - Different objects are not equal
+     * - Follows data class equality contract
+     */
     @Test
     fun `should support equality comparison`() {
         // Given
@@ -140,6 +235,17 @@ class AuthenticationResultTest {
         assertNotEquals(result1.hashCode(), result3.hashCode())
     }
 
+    /**
+     * Tests toString implementation for debugging and logging.
+     * 
+     * Verifies that the data class provides meaningful string representation
+     * that includes key properties for debugging purposes.
+     * 
+     * Expected behavior:
+     * - Includes class name in string representation
+     * - Shows key property values
+     * - Provides useful debugging information
+     */
     @Test
     fun `should support toString representation`() {
         // Given
@@ -160,6 +266,18 @@ class AuthenticationResultTest {
         assertTrue(toString.contains("username=user"))
     }
 
+    /**
+     * Tests copy functionality for immutable updates.
+     * 
+     * Verifies that the data class copy method allows creating modified
+     * instances while preserving immutability principles.
+     * 
+     * Expected behavior:
+     * - Creates new instance with modified properties
+     * - Preserves unchanged properties from original
+     * - Maintains immutability of original instance
+     * - Supports functional programming patterns
+     */
     @Test
     fun `should support copy functionality`() {
         // Given
@@ -183,6 +301,17 @@ class AuthenticationResultTest {
         assertEquals(original.expiresAt, copied.expiresAt)
     }
 
+    /**
+     * Tests handling of null session index in success scenarios.
+     * 
+     * Verifies that the success factory method properly handles null
+     * session index values, which may occur in certain authentication flows.
+     * 
+     * Expected behavior:
+     * - Accepts null session index without errors
+     * - Creates valid successful authentication result
+     * - Maintains null value in result
+     */
     @Test
     fun `should handle null session index in success`() {
         // When

@@ -3,8 +3,48 @@ package com.company.techportfolio.gateway.domain.port
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
+/**
+ * Unit test class for the AuthorizationResult domain model.
+ * 
+ * This test class verifies the behavior of the AuthorizationResult data class
+ * which represents the outcome of authorization operations in the system.
+ * It tests all factory methods, constructors, and data class functionality
+ * for role-based access control (RBAC) decisions.
+ * 
+ * Test coverage includes:
+ * - Authorized result creation with permissions
+ * - Unauthorized result creation with and without error messages
+ * - Constructor and default parameter handling
+ * - Data class equality, hashCode, and toString
+ * - Copy functionality for immutable updates
+ * - Edge cases with empty values and special characters
+ * - Permission list handling
+ * 
+ * Testing approach:
+ * - Tests all companion object factory methods
+ * - Validates authorization decision logic
+ * - Verifies data class properties and behavior
+ * - Tests edge cases and boundary conditions
+ * - Ensures proper permission management
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 class AuthorizationResultTest {
 
+    /**
+     * Tests authorized result creation using factory method.
+     * 
+     * Verifies that the authorized factory method creates an AuthorizationResult
+     * with all required properties set correctly for successful authorization.
+     * 
+     * Expected behavior:
+     * - Sets isAuthorized to true
+     * - Populates all authorization context properties
+     * - Includes granted permissions list
+     * - Sets errorMessage to null
+     * - Preserves all input parameters
+     */
     @Test
     fun `should create authorized result`() {
         // Given
@@ -25,6 +65,19 @@ class AuthorizationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests unauthorized result creation without error message.
+     * 
+     * Verifies that the unauthorized factory method creates an AuthorizationResult
+     * for failed authorization without providing a specific error message.
+     * 
+     * Expected behavior:
+     * - Sets isAuthorized to false
+     * - Populates authorization context properties
+     * - Sets permissions to empty list
+     * - Sets errorMessage to null (no specific error)
+     * - Indicates authorization denial without details
+     */
     @Test
     fun `should create unauthorized result without error message`() {
         // Given
@@ -44,6 +97,19 @@ class AuthorizationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests unauthorized result creation with specific error message.
+     * 
+     * Verifies that the unauthorized factory method can include a specific
+     * error message explaining why authorization was denied.
+     * 
+     * Expected behavior:
+     * - Sets isAuthorized to false
+     * - Populates authorization context properties
+     * - Sets permissions to empty list
+     * - Includes specific error message
+     * - Provides detailed authorization failure reason
+     */
     @Test
     fun `should create unauthorized result with error message`() {
         // Given
@@ -64,6 +130,18 @@ class AuthorizationResultTest {
         assertEquals(errorMessage, result.errorMessage)
     }
 
+    /**
+     * Tests direct constructor usage with all parameters.
+     * 
+     * Verifies that the primary constructor can be used directly to create
+     * AuthorizationResult instances with custom parameter combinations.
+     * 
+     * Expected behavior:
+     * - Accepts all parameters directly
+     * - Preserves all input values
+     * - Provides flexibility for custom authorization scenarios
+     * - Supports manual permission list management
+     */
     @Test
     fun `should create authorization result with constructor`() {
         // Given
@@ -93,6 +171,18 @@ class AuthorizationResultTest {
         assertEquals(errorMessage, result.errorMessage)
     }
 
+    /**
+     * Tests constructor with default empty permissions parameter.
+     * 
+     * Verifies that the constructor properly handles default values
+     * when permissions parameter is not provided.
+     * 
+     * Expected behavior:
+     * - Uses empty list as default for permissions
+     * - Creates valid instance with minimal input
+     * - Demonstrates proper default parameter handling
+     * - Sets appropriate defaults for authorization context
+     */
     @Test
     fun `should create authorization result with default empty permissions`() {
         // Given
@@ -118,6 +208,19 @@ class AuthorizationResultTest {
         assertNull(result.errorMessage)
     }
 
+    /**
+     * Tests data class equality and hashCode implementation.
+     * 
+     * Verifies that the data class properly implements equality comparison
+     * and hashCode generation based on all properties including permission lists.
+     * 
+     * Expected behavior:
+     * - Equal objects have same property values
+     * - Equal objects have same hashCode
+     * - Different objects are not equal
+     * - Follows data class equality contract
+     * - Handles permission list comparisons correctly
+     */
     @Test
     fun `should support equality comparison`() {
         // Given
@@ -142,6 +245,18 @@ class AuthorizationResultTest {
         assertNotEquals(result1.hashCode(), result3.hashCode())
     }
 
+    /**
+     * Tests toString implementation for debugging and logging.
+     * 
+     * Verifies that the data class provides meaningful string representation
+     * that includes key properties for debugging authorization decisions.
+     * 
+     * Expected behavior:
+     * - Includes class name in string representation
+     * - Shows key property values
+     * - Provides useful debugging information for authorization
+     * - Helps with troubleshooting access control issues
+     */
     @Test
     fun `should support toString representation`() {
         // Given
@@ -163,6 +278,18 @@ class AuthorizationResultTest {
         assertTrue(toString.contains("action=read"))
     }
 
+    /**
+     * Tests copy functionality for immutable updates.
+     * 
+     * Verifies that the data class copy method allows creating modified
+     * instances while preserving immutability principles.
+     * 
+     * Expected behavior:
+     * - Creates new instance with modified properties
+     * - Preserves unchanged properties from original
+     * - Maintains immutability of original instance
+     * - Supports functional programming patterns
+     */
     @Test
     fun `should support copy functionality`() {
         // Given
@@ -185,6 +312,18 @@ class AuthorizationResultTest {
         assertEquals(original.errorMessage, copied.errorMessage)
     }
 
+    /**
+     * Tests handling of empty username in authorization context.
+     * 
+     * Verifies that the authorization result can handle edge cases
+     * such as empty usernames without causing errors.
+     * 
+     * Expected behavior:
+     * - Accepts empty username without errors
+     * - Creates valid authorization result
+     * - Maintains empty value in result
+     * - Handles edge case gracefully
+     */
     @Test
     fun `should handle empty username`() {
         // When
@@ -200,6 +339,19 @@ class AuthorizationResultTest {
         assertEquals("", result.username)
     }
 
+    /**
+     * Tests handling of empty resource in authorization context.
+     * 
+     * Verifies that the authorization result can handle edge cases
+     * such as empty resource names without causing errors. This supports
+     * scenarios where resource identification may be minimal.
+     * 
+     * Expected behavior:
+     * - Accepts empty resource without errors
+     * - Creates valid authorization result
+     * - Maintains empty value in result
+     * - Handles edge case gracefully
+     */
     @Test
     fun `should handle empty resource`() {
         // When
@@ -215,6 +367,19 @@ class AuthorizationResultTest {
         assertEquals("", result.resource)
     }
 
+    /**
+     * Tests handling of empty action in authorization context.
+     * 
+     * Verifies that the authorization result can handle edge cases
+     * such as empty action names without causing errors. This supports
+     * scenarios where action specification may be minimal.
+     * 
+     * Expected behavior:
+     * - Accepts empty action without errors
+     * - Creates valid authorization result
+     * - Maintains empty value in result
+     * - Handles edge case gracefully
+     */
     @Test
     fun `should handle empty action`() {
         // When
@@ -230,6 +395,19 @@ class AuthorizationResultTest {
         assertEquals("", result.action)
     }
 
+    /**
+     * Tests handling of empty permissions list in authorization result.
+     * 
+     * Verifies that authorized results can have empty permissions lists,
+     * which might occur in scenarios where authorization is granted
+     * through other mechanisms or for public resources.
+     * 
+     * Expected behavior:
+     * - Accepts empty permissions list without errors
+     * - Creates valid authorization result
+     * - Maintains empty list in result
+     * - Supports authorization without explicit permissions
+     */
     @Test
     fun `should handle empty permissions list`() {
         // When
@@ -245,6 +423,19 @@ class AuthorizationResultTest {
         assertEquals(emptyList<String>(), result.permissions)
     }
 
+    /**
+     * Tests handling of special characters in authorization parameters.
+     * 
+     * Verifies that the authorization result can handle parameters containing
+     * special characters commonly found in usernames, resource paths, and
+     * complex action specifications.
+     * 
+     * Expected behavior:
+     * - Accepts special characters without errors
+     * - Preserves special characters in result
+     * - Supports complex parameter formats
+     * - Handles real-world parameter scenarios
+     */
     @Test
     fun `should handle special characters in parameters`() {
         // Given
@@ -264,6 +455,19 @@ class AuthorizationResultTest {
         assertEquals(permissions, result.permissions)
     }
 
+    /**
+     * Tests handling of long error messages in authorization failures.
+     * 
+     * Verifies that the authorization result can handle detailed error
+     * messages that provide comprehensive information about authorization
+     * failures, including required and current permissions.
+     * 
+     * Expected behavior:
+     * - Accepts long error messages without truncation
+     * - Preserves complete error message content
+     * - Supports detailed failure explanations
+     * - Handles verbose authorization feedback
+     */
     @Test
     fun `should handle long error message`() {
         // Given
@@ -282,6 +486,19 @@ class AuthorizationResultTest {
         assertEquals(errorMessage, result.errorMessage)
     }
 
+    /**
+     * Tests handling of Unicode characters in authorization parameters.
+     * 
+     * Verifies that the authorization result can handle international
+     * characters and Unicode text in usernames, resources, actions, and
+     * permissions. This supports global applications with multilingual users.
+     * 
+     * Expected behavior:
+     * - Accepts Unicode characters without errors
+     * - Preserves Unicode characters correctly
+     * - Supports international character sets
+     * - Handles multilingual authorization contexts
+     */
     @Test
     fun `should handle unicode characters in parameters`() {
         // Given

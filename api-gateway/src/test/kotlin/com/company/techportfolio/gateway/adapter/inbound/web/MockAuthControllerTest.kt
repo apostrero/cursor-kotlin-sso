@@ -12,17 +12,60 @@ import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.ui.Model
 
+/**
+ * Unit test class for the MockAuthController.
+ * 
+ * This test class verifies the behavior of the MockAuthController which provides
+ * mock authentication functionality for development and testing environments.
+ * It tests web-based login pages, API authentication endpoints, and user management.
+ * 
+ * Test coverage includes:
+ * - Mock login page rendering with error/logout parameters
+ * - Mock authentication success scenarios
+ * - API-based authentication with different user types
+ * - JWT token generation and user information handling
+ * - Security context management and authentication state
+ * - Edge cases and error handling
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking dependencies
+ * - Follows Given-When-Then test structure
+ * - Tests Spring Security context integration
+ * - Verifies HTTP status codes and response bodies
+ * - Validates service method interactions
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 class MockAuthControllerTest {
 
     private val authenticationPort = mockk<AuthenticationPort>()
     private lateinit var mockAuthController: MockAuthController
 
+    /**
+     * Sets up test fixtures before each test method.
+     * 
+     * Initializes the MockAuthController with a mocked AuthenticationPort
+     * and clears all mocks to ensure test isolation.
+     */
     @BeforeEach
     fun setUp() {
         clearAllMocks()
         mockAuthController = MockAuthController(authenticationPort)
     }
 
+    /**
+     * Tests mock login page rendering without any parameters.
+     * 
+     * Verifies that the controller returns the correct view name and
+     * sets appropriate model attributes when no error or logout parameters
+     * are provided.
+     * 
+     * Expected behavior:
+     * - Returns "mock-login" view name
+     * - Sets error attribute to false
+     * - Sets logout attribute to false
+     */
     @Test
     fun `should return mock login page without parameters`() {
         // Given
@@ -37,6 +80,17 @@ class MockAuthControllerTest {
         verify { model.addAttribute("logout", false) }
     }
 
+    /**
+     * Tests mock login page rendering with error parameter.
+     * 
+     * Verifies that the controller correctly handles error parameters
+     * and sets the appropriate model attributes for displaying error messages.
+     * 
+     * Expected behavior:
+     * - Returns "mock-login" view name
+     * - Sets error attribute to true when error parameter is present
+     * - Sets logout attribute to false
+     */
     @Test
     fun `should return mock login page with error parameter`() {
         // Given
@@ -51,6 +105,17 @@ class MockAuthControllerTest {
         verify { model.addAttribute("logout", false) }
     }
 
+    /**
+     * Tests mock login page rendering with logout parameter.
+     * 
+     * Verifies that the controller correctly handles logout parameters
+     * and sets the appropriate model attributes for displaying logout confirmation.
+     * 
+     * Expected behavior:
+     * - Returns "mock-login" view name
+     * - Sets error attribute to false
+     * - Sets logout attribute to true when logout parameter is present
+     */
     @Test
     fun `should return mock login page with logout parameter`() {
         // Given
@@ -65,6 +130,17 @@ class MockAuthControllerTest {
         verify { model.addAttribute("logout", true) }
     }
 
+    /**
+     * Tests mock login page rendering with both error and logout parameters.
+     * 
+     * Verifies that the controller can handle multiple parameters simultaneously
+     * and sets both model attributes correctly.
+     * 
+     * Expected behavior:
+     * - Returns "mock-login" view name
+     * - Sets error attribute to true
+     * - Sets logout attribute to true
+     */
     @Test
     fun `should return mock login page with both error and logout parameters`() {
         // Given
@@ -79,6 +155,18 @@ class MockAuthControllerTest {
         verify { model.addAttribute("logout", true) }
     }
 
+    /**
+     * Tests successful mock authentication with authenticated user in security context.
+     * 
+     * Verifies that the controller can extract user information from Spring Security
+     * context, generate JWT tokens, and return comprehensive user details.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Generates JWT token via AuthenticationPort
+     * - Returns user details with formatted information
+     * - Includes success message and token in response
+     */
     @Test
     fun `should handle mock auth success with authenticated user`() {
         // Given
@@ -123,6 +211,17 @@ class MockAuthControllerTest {
         SecurityContextHolder.clearContext()
     }
 
+    /**
+     * Tests mock authentication failure when no authentication is present in security context.
+     * 
+     * Verifies that the controller handles missing authentication gracefully
+     * and returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 400 Bad Request status
+     * - Returns error message indicating no authentication
+     * - Does not call token generation
+     */
     @Test
     fun `should handle mock auth success with no authentication`() {
         // Given
@@ -146,6 +245,17 @@ class MockAuthControllerTest {
         SecurityContextHolder.clearContext()
     }
 
+    /**
+     * Tests mock authentication failure when user is not authenticated.
+     * 
+     * Verifies that the controller handles unauthenticated users gracefully
+     * and returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 400 Bad Request status
+     * - Returns error message indicating no authentication
+     * - Does not call token generation
+     */
     @Test
     fun `should handle mock auth success with unauthenticated user`() {
         // Given
@@ -173,6 +283,18 @@ class MockAuthControllerTest {
         SecurityContextHolder.clearContext()
     }
 
+    /**
+     * Tests API-based mock authentication with valid user1 credentials.
+     * 
+     * Verifies that the controller can authenticate users via API endpoint
+     * with predefined credentials and return appropriate JWT tokens and user information.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 200 OK for valid credentials
+     * - Generates JWT token with appropriate authorities
+     * - Returns user details with role-specific permissions
+     * - Validates Portfolio Manager role permissions
+     */
     @Test
     fun `should handle mock API login with valid user1 credentials`() {
         // Given

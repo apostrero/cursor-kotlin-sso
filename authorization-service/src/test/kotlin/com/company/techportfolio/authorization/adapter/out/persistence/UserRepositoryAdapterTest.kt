@@ -14,6 +14,41 @@ import org.junit.jupiter.api.Assertions.*
 import java.time.LocalDateTime
 import java.util.*
 
+/**
+ * User Repository Adapter Test Suite - Persistence Layer Unit Tests
+ *
+ * This test class provides comprehensive unit testing for the UserRepositoryAdapter,
+ * focusing on the adapter's interaction with JPA repositories and proper entity-to-domain
+ * model mapping. The tests use MockK for mocking JPA repository dependencies.
+ *
+ * ## Test Strategy:
+ * - **Unit Testing**: Isolated testing of adapter logic without database
+ * - **Mock Dependencies**: JPA repositories mocked with MockK
+ * - **Mapping Validation**: Entity-to-domain and domain-to-entity conversions
+ * - **Relationship Testing**: User-role-permission relationship resolution
+ * - **Edge Case Coverage**: Null handling, empty results, and error scenarios
+ *
+ * ## Test Coverage:
+ * - User lookup operations (by ID, by username)
+ * - User-role relationship queries
+ * - User-permission resolution through roles
+ * - Active/inactive user handling
+ * - Null and empty result scenarios
+ * - Entity-domain mapping accuracy
+ *
+ * ## Architecture:
+ * - **Adapter**: UserRepositoryAdapter (system under test)
+ * - **Dependencies**: UserJpaRepository, RoleJpaRepository, PermissionJpaRepository (mocked)
+ * - **Framework**: JUnit 5 with MockK
+ * - **Pattern**: Hexagonal architecture adapter testing
+ *
+ * ## Test Data:
+ * Helper methods create consistent test entities and domain objects for reliable testing.
+ *
+ * @author Technology Portfolio Team
+ * @version 1.0
+ * @since 1.0
+ */
 class UserRepositoryAdapterTest {
 
     private val userJpaRepository = mockk<UserJpaRepository>()

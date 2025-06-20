@@ -55,9 +55,14 @@ technology-portfolio-service/
 │   │           └── PortfolioEventPublisher.kt
 │   ├── domain/
 │   │   ├── model/
-│   │   │   ├── PortfolioRequest.kt
+│   │   │   ├── CreatePortfolioRequest.kt
+│   │   │   ├── UpdatePortfolioRequest.kt
+│   │   │   ├── AddTechnologyRequest.kt
+│   │   │   ├── UpdateTechnologyRequest.kt
 │   │   │   ├── PortfolioResponse.kt
-│   │   │   └── TechnologyRequest.kt
+│   │   │   ├── TechnologyResponse.kt
+│   │   │   ├── PortfolioSummary.kt
+│   │   │   └── TechnologySummary.kt
 │   │   ├── port/
 │   │   │   ├── PortfolioRepository.kt
 │   │   │   ├── TechnologyRepository.kt
@@ -81,6 +86,31 @@ technology-portfolio-service/
         └── domain/service/
             └── PortfolioServiceTest.kt
 ```
+
+## Domain Model Organization
+
+The domain model follows a clear separation of concerns with each data class in its own file for better maintainability and readability:
+
+### Request Models
+- **`CreatePortfolioRequest.kt`** - Data required for creating new portfolios
+- **`UpdatePortfolioRequest.kt`** - Data for updating existing portfolios (all fields optional)
+- **`AddTechnologyRequest.kt`** - Comprehensive data for adding technologies to portfolios
+- **`UpdateTechnologyRequest.kt`** - Data for updating existing technologies (all fields optional)
+
+### Response Models
+- **`PortfolioResponse.kt`** - Complete portfolio information returned to clients
+- **`TechnologyResponse.kt`** - Complete technology information within portfolios
+
+### Summary Models
+- **`PortfolioSummary.kt`** - Condensed portfolio view for listing operations
+- **`TechnologySummary.kt`** - Condensed technology view for overview purposes
+
+This organization provides several benefits:
+- **Enhanced Readability**: Each model is focused and easy to understand
+- **Better Maintainability**: Changes to one model don't affect others
+- **Improved IDE Support**: Better navigation, completion, and refactoring
+- **Cleaner Git History**: Focused commits for individual model changes
+- **Logical Separation**: Clear distinction between request, response, and summary models
 
 ## Setup and Configuration
 

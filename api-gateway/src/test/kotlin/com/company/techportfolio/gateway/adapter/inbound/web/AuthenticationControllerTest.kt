@@ -12,17 +12,59 @@ import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import java.time.LocalDateTime
 
+/**
+ * Unit test class for the AuthenticationController.
+ * 
+ * This test class verifies the behavior of the AuthenticationController REST endpoints
+ * using MockK for mocking dependencies. It tests all HTTP endpoints including
+ * authentication, token validation, token refresh, authorization, and health checks.
+ * 
+ * Test coverage includes:
+ * - Successful authentication scenarios
+ * - Authentication failure scenarios
+ * - Token validation (valid and invalid tokens)
+ * - Token refresh operations
+ * - User authorization checks
+ * - Health check endpoint
+ * - Edge cases and error handling
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking the AuthenticationService
+ * - Follows Given-When-Then test structure
+ * - Verifies HTTP status codes and response bodies
+ * - Validates service method interactions
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
 class AuthenticationControllerTest {
 
     private val authenticationService = mockk<AuthenticationService>()
     private lateinit var authenticationController: AuthenticationController
 
+    /**
+     * Sets up test fixtures before each test method.
+     * 
+     * Initializes the AuthenticationController with a mocked AuthenticationService
+     * and clears all mocks to ensure test isolation.
+     */
     @BeforeEach
     fun setUp() {
         clearAllMocks()
         authenticationController = AuthenticationController(authenticationService)
     }
 
+    /**
+     * Tests successful user authentication with valid credentials.
+     * 
+     * Verifies that the controller returns HTTP 200 OK with authentication
+     * result when the authentication service successfully authenticates a user.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Returns authentication result with user details and JWT token
+     * - Calls authentication service exactly once
+     */
     @Test
     fun `should authenticate user successfully`() {
         // Given
@@ -50,6 +92,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.authenticateUser(mockAuthentication) }
     }
 
+    /**
+     * Tests authentication failure with invalid credentials.
+     * 
+     * Verifies that the controller returns HTTP 400 Bad Request when
+     * authentication fails due to invalid credentials or other errors.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 400 Bad Request status
+     * - Returns authentication result with error message
+     * - Indicates authentication failure in response
+     */
     @Test
     fun `should return bad request when authentication fails`() {
         // Given
@@ -70,6 +123,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.authenticateUser(mockAuthentication) }
     }
 
+    /**
+     * Tests successful JWT token validation.
+     * 
+     * Verifies that the controller validates JWT tokens correctly and returns
+     * HTTP 200 OK with validation result for valid tokens.
+     * 
+     * Expected behavior:
+     * - Strips "Bearer " prefix from Authorization header
+     * - Returns HTTP 200 OK status for valid tokens
+     * - Returns validation result with user information
+     */
     @Test
     fun `should validate token successfully`() {
         // Given
@@ -97,6 +161,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.validateToken(token) }
     }
 
+    /**
+     * Tests JWT token validation failure.
+     * 
+     * Verifies that the controller returns HTTP 401 Unauthorized when
+     * token validation fails due to invalid signature, expiration, or format.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 401 Unauthorized status
+     * - Returns validation result with error message
+     * - Indicates validation failure in response
+     */
     @Test
     fun `should return unauthorized when token validation fails`() {
         // Given
@@ -118,6 +193,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.validateToken(token) }
     }
 
+    /**
+     * Tests handling of authorization header without Bearer prefix.
+     * 
+     * Verifies that the controller can handle authorization headers that
+     * don't include the "Bearer " prefix by processing the token directly.
+     * 
+     * Expected behavior:
+     * - Processes token without Bearer prefix
+     * - Returns successful validation for valid tokens
+     * - Maintains normal validation behavior
+     */
     @Test
     fun `should handle authorization header without Bearer prefix`() {
         // Given
@@ -143,6 +229,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.validateToken(token) }
     }
 
+    /**
+     * Tests successful JWT token refresh operation.
+     * 
+     * Verifies that the controller can refresh valid JWT tokens and return
+     * new tokens with extended expiration times.
+     * 
+     * Expected behavior:
+     * - Strips "Bearer " prefix from Authorization header
+     * - Returns HTTP 200 OK with new token
+     * - Provides token in response body
+     */
     @Test
     fun `should refresh token successfully`() {
         // Given
@@ -162,6 +259,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.refreshToken(oldToken) }
     }
 
+    /**
+     * Tests token refresh failure scenarios.
+     * 
+     * Verifies that the controller returns HTTP 401 Unauthorized when
+     * token refresh fails due to expired or invalid tokens.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 401 Unauthorized status
+     * - Returns error message in response body
+     * - Handles null return from service gracefully
+     */
     @Test
     fun `should return unauthorized when token refresh fails`() {
         // Given
@@ -180,6 +288,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.refreshToken(expiredToken) }
     }
 
+    /**
+     * Tests successful user authorization for resource access.
+     * 
+     * Verifies that the controller can authorize users to perform specific
+     * actions on resources and return HTTP 200 OK for authorized requests.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 200 OK for authorized users
+     * - Returns authorization result with permissions
+     * - Validates all authorization parameters
+     */
     @Test
     fun `should authorize user successfully`() {
         // Given
@@ -209,6 +328,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.authorizeUser(username, resource, action) }
     }
 
+    /**
+     * Tests authorization failure scenarios.
+     * 
+     * Verifies that the controller returns HTTP 403 Forbidden when
+     * users don't have sufficient permissions for requested actions.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 403 Forbidden status
+     * - Returns authorization result with error message
+     * - Indicates authorization failure in response
+     */
     @Test
     fun `should return forbidden when authorization fails`() {
         // Given
@@ -236,6 +366,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.authorizeUser(username, resource, action) }
     }
 
+    /**
+     * Tests the health check endpoint functionality.
+     * 
+     * Verifies that the health check endpoint returns proper status
+     * information for monitoring and load balancer health checks.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Returns service status and name
+     * - No external dependencies required
+     */
     @Test
     fun `should return health check status`() {
         // When
@@ -246,6 +387,17 @@ class AuthenticationControllerTest {
         assertEquals(mapOf("status" to "UP", "service" to "authentication"), response.body)
     }
 
+    /**
+     * Tests handling of empty authorization header for token validation.
+     * 
+     * Verifies that the controller handles empty tokens gracefully and
+     * returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 401 Unauthorized for empty tokens
+     * - Handles empty string after Bearer prefix
+     * - Provides meaningful error responses
+     */
     @Test
     fun `should handle empty authorization header for token validation`() {
         // Given
@@ -265,6 +417,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.validateToken(token) }
     }
 
+    /**
+     * Tests handling of empty authorization header for token refresh.
+     * 
+     * Verifies that the controller handles empty tokens gracefully during
+     * refresh operations and returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 401 Unauthorized for empty tokens
+     * - Handles null return from service
+     * - Provides meaningful error messages
+     */
     @Test
     fun `should handle empty authorization header for token refresh`() {
         // Given
@@ -283,6 +446,17 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.refreshToken(token) }
     }
 
+    /**
+     * Tests authorization with empty parameters.
+     * 
+     * Verifies that the controller handles empty or null authorization
+     * parameters gracefully and returns appropriate error responses.
+     * 
+     * Expected behavior:
+     * - Returns HTTP 403 Forbidden for invalid parameters
+     * - Handles empty strings for all parameters
+     * - Provides meaningful error responses
+     */
     @Test
     fun `should handle authorization with empty parameters`() {
         // Given
@@ -308,6 +482,18 @@ class AuthenticationControllerTest {
         verify(exactly = 1) { authenticationService.authorizeUser(username, resource, action) }
     }
 
+    /**
+     * Tests authorization with special characters in parameters.
+     * 
+     * Verifies that the controller can handle special characters in
+     * authorization parameters such as email addresses and complex resource paths.
+     * 
+     * Expected behavior:
+     * - Handles email addresses as usernames
+     * - Processes resource paths with special characters
+     * - Supports complex action strings
+     * - Returns successful authorization when appropriate
+     */
     @Test
     fun `should handle special characters in authorization parameters`() {
         // Given

@@ -13,6 +13,32 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.saml2.provider.service.authentication.Saml2Authentication
 import java.time.LocalDateTime
 
+/**
+ * Unit test class for the AuthenticationService domain service.
+ * 
+ * This test class verifies the behavior of the AuthenticationService which orchestrates
+ * authentication and authorization operations in the system. It tests the coordination
+ * between various ports and the implementation of business logic for authentication flows.
+ * 
+ * Test coverage includes:
+ * - User authentication with SAML integration
+ * - JWT token validation and refresh operations
+ * - User authorization checks with permission validation
+ * - Integration with authentication, authorization, and audit ports
+ * - Error handling and edge cases
+ * - Business logic validation and flow control
+ * 
+ * Testing approach:
+ * - Uses MockK for mocking all port dependencies
+ * - Tests service orchestration and business logic
+ * - Verifies port interactions and method calls
+ * - Validates error handling and edge cases
+ * - Follows Given-When-Then test structure
+ * 
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ */
+
 class AuthenticationServiceTest {
 
     private val authenticationPort = mockk<AuthenticationPort>()
@@ -183,6 +209,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests token validation exception handling.
+     * 
+     * Verifies that the service gracefully handles exceptions during token
+     * validation by returning an invalid result and logging appropriate events.
+     * 
+     * Expected behavior:
+     * - Returns invalid TokenValidationResult on exception
+     * - Logs token validation failure event
+     * - Provides appropriate error message
+     * - Handles authentication port failures gracefully
+     */
     @Test
     fun `should handle token validation exception`() {
         // Given
@@ -209,6 +247,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests successful token refresh operation.
+     * 
+     * Verifies that the service can refresh tokens by coordinating with the
+     * authentication port and logging appropriate audit events.
+     * 
+     * Expected behavior:
+     * - Extracts user information from original token
+     * - Calls authentication port to refresh token
+     * - Returns new token on success
+     * - Logs token refresh event with user context
+     */
     @Test
     fun `should refresh token successfully`() {
         // Given
@@ -242,6 +292,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests token refresh failure when username extraction fails.
+     * 
+     * Verifies that the service handles cases where username cannot be
+     * extracted from the token during refresh operation.
+     * 
+     * Expected behavior:
+     * - Returns null when username extraction fails
+     * - Does not log successful refresh event
+     * - Handles extraction failure gracefully
+     * - Prevents refresh without user context
+     */
     @Test
     fun `should handle token refresh failure when username extraction fails`() {
         // Given
@@ -268,6 +330,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests token refresh failure when refresh operation returns null.
+     * 
+     * Verifies that the service handles cases where the authentication port
+     * cannot refresh the token (e.g., token is too old or invalid).
+     * 
+     * Expected behavior:
+     * - Returns null when refresh operation fails
+     * - Does not log successful refresh event
+     * - Handles authentication port failure gracefully
+     * - Supports token lifecycle management
+     */
     @Test
     fun `should handle token refresh failure when refresh returns null`() {
         // Given
@@ -292,6 +366,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests token refresh exception handling.
+     * 
+     * Verifies that the service gracefully handles exceptions during token
+     * refresh operations by returning null and logging appropriate events.
+     * 
+     * Expected behavior:
+     * - Returns null on exception during refresh
+     * - Logs token invalid event
+     * - Handles authentication port exceptions gracefully
+     * - Provides safe fallback behavior
+     */
     @Test
     fun `should handle token refresh exception`() {
         // Given
@@ -316,6 +402,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests successful user authorization operation.
+     * 
+     * Verifies that the service can authorize users by coordinating with the
+     * authorization port and logging appropriate audit events.
+     * 
+     * Expected behavior:
+     * - Calls authorization port for user authorization
+     * - Returns authorization result with permissions
+     * - Logs authorization event with full context
+     * - Supports role-based access control
+     */
     @Test
     fun `should authorize user successfully`() {
         // Given
@@ -352,6 +450,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests user authorization failure handling.
+     * 
+     * Verifies that the service properly handles authorization failures
+     * by returning unauthorized results and logging appropriate events.
+     * 
+     * Expected behavior:
+     * - Returns unauthorized result with error message
+     * - Logs authorization failure event
+     * - Preserves authorization context information
+     * - Supports access control auditing
+     */
     @Test
     fun `should handle authorization failure`() {
         // Given
@@ -388,6 +498,19 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests authorization exception handling.
+     * 
+     * Verifies that the service gracefully handles exceptions during
+     * authorization operations by returning unauthorized results and
+     * logging appropriate events.
+     * 
+     * Expected behavior:
+     * - Returns unauthorized result on exception
+     * - Logs authorization failure event
+     * - Provides appropriate error message
+     * - Handles authorization port failures gracefully
+     */
     @Test
     fun `should handle authorization exception`() {
         // Given
@@ -422,6 +545,18 @@ class AuthenticationServiceTest {
         }
     }
 
+    /**
+     * Tests handling of non-SAML authentication gracefully.
+     * 
+     * Verifies that the service properly handles authentication objects
+     * that are not SAML-based by returning authentication failures.
+     * 
+     * Expected behavior:
+     * - Returns authentication failure for non-SAML auth
+     * - Logs authentication failure event
+     * - Provides appropriate error message
+     * - Supports authentication type validation
+     */
     @Test
     fun `should handle non-SAML authentication gracefully`() {
         // Given
