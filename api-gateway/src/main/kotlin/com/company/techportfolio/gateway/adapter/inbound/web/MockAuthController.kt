@@ -9,22 +9,24 @@ import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.web.bind.annotation.*
+import reactor.core.publisher.Mono
 import java.time.LocalDateTime
 
 /**
- * Mock authentication controller for development and testing purposes.
+ * Mock authentication controller for development and testing purposes (REACTIVE).
  * 
  * This controller provides mock authentication functionality when the application
  * is running in 'mock-auth' profile. It simulates SAML SSO authentication flows
  * without requiring external identity providers, making it ideal for development
- * and testing environments.
+ * and testing environments using reactive programming patterns.
  * 
  * Key features:
- * - Web-based mock login page
- * - Programmatic API authentication endpoints
+ * - Web-based mock login page (synchronous view rendering)
+ * - Programmatic API authentication endpoints (reactive)
  * - Predefined test users with different roles
  * - JWT token generation for authenticated users
  * - User information and permission management
+ * - Reactive error handling with onErrorMap and onErrorResume
  * 
  * Available test users:
  * - user1/password (Portfolio Manager)
@@ -47,6 +49,8 @@ class MockAuthController(
      * 
      * This endpoint renders a web-based login form for interactive authentication
      * during development. It supports error and logout message display.
+     * 
+     * Note: This method remains synchronous as it returns a view name for template rendering.
      * 
      * @param error Optional error parameter to display authentication errors
      * @param logout Optional logout parameter to display logout confirmation
@@ -71,17 +75,19 @@ class MockAuthController(
      * JWT tokens and return user information. It extracts authentication details
      * from the Spring Security context.
      * 
-     * @return ResponseEntity with authentication result including JWT token and user details
+     * **Reactive**: Returns Mono<ResponseEntity<Map<String, Any>>>
+     * 
+     * @return Mono<ResponseEntity<Map<String, Any>>> with authentication result including JWT token and user details
      */
     @GetMapping("/api/auth/mock-success")
     @ResponseBody
-    fun mockAuthSuccess(): ResponseEntity<Map<String, Any>> {
+    fun mockAuthSuccess(): Mono<ResponseEntity<Map<String, Any>>> {
         val authentication = SecurityContextHolder.getContext().authentication
         
         if (authentication == null || !authentication.isAuthenticated) {
-            return ResponseEntity.badRequest().body(
+            return Mono.just(ResponseEntity.badRequest().body(
                 mapOf("error" to "Not authenticated")
-            )
+            ))
         }
 
         val authorities = authentication.authorities.map { it.authority }
@@ -99,7 +105,7 @@ class MockAuthController(
             expiresAt = LocalDateTime.now().plusHours(1)
         )
 
-        return ResponseEntity.ok(
+        return Mono.just(ResponseEntity.ok(
             mapOf(
                 "success" to true,
                 "token" to jwtToken,
@@ -112,7 +118,7 @@ class MockAuthController(
                 ),
                 "message" to "Mock authentication successful"
             )
-        )
+        ))
     }
 
     /**
@@ -122,14 +128,16 @@ class MockAuthController(
      * for automated testing and API integration. It validates credentials against
      * predefined test users and generates JWT tokens for successful authentication.
      * 
+     * **Reactive**: Returns Mono<ResponseEntity<Map<String, Any>>>
+     * 
      * @param loginRequest Request body containing username and password
-     * @return ResponseEntity with authentication result (200 OK if successful, 400 Bad Request if failed)
+     * @return Mono<ResponseEntity<Map<String, Any>>> with authentication result (200 OK if successful, 400 Bad Request if failed)
      */
     @PostMapping("/api/auth/mock-login")
     @ResponseBody
     fun mockApiLogin(
         @RequestBody loginRequest: MockLoginRequest
-    ): ResponseEntity<Map<String, Any>> {
+    ): Mono<ResponseEntity<Map<String, Any>>> {
         // This endpoint allows programmatic login for testing
         val validCredentials = mapOf(
             "user1" to "password",
@@ -138,9 +146,9 @@ class MockAuthController(
         )
 
         if (validCredentials[loginRequest.username] != loginRequest.password) {
-            return ResponseEntity.badRequest().body(
+            return Mono.just(ResponseEntity.badRequest().body(
                 mapOf("error" to "Invalid credentials")
-            )
+            ))
         }
 
         // Create mock authorities based on username
@@ -163,7 +171,7 @@ class MockAuthController(
             expiresAt = LocalDateTime.now().plusHours(1)
         )
 
-        return ResponseEntity.ok(
+        return Mono.just(ResponseEntity.ok(
             mapOf(
                 "success" to true,
                 "token" to jwtToken,
@@ -176,7 +184,7 @@ class MockAuthController(
                 ),
                 "message" to "Mock authentication successful"
             )
-        )
+        ))
     }
 
     /**
@@ -186,12 +194,14 @@ class MockAuthController(
      * roles, and permissions. Useful for testing and development to understand
      * available user accounts and their capabilities.
      * 
-     * @return ResponseEntity with list of mock users and their details
+     * **Reactive**: Returns Mono<ResponseEntity<Map<String, Any>>>
+     * 
+     * @return Mono<ResponseEntity<Map<String, Any>>> with list of mock users and their details
      */
     @GetMapping("/api/auth/mock-users")
     @ResponseBody
-    fun getMockUsers(): ResponseEntity<Map<String, Any>> {
-        return ResponseEntity.ok(
+    fun getMockUsers(): Mono<ResponseEntity<Map<String, Any>>> {
+        return Mono.just(ResponseEntity.ok(
             mapOf(
                 "users" to listOf(
                     mapOf(
@@ -215,7 +225,7 @@ class MockAuthController(
                 ),
                 "note" to "These are mock users for testing. Use /api/auth/mock-login for programmatic authentication."
             )
-        )
+        ))
     }
 }
 

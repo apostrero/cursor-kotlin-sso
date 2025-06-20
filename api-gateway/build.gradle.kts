@@ -39,9 +39,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-security")
     implementation("org.springframework.security:spring-security-saml2-service-provider")
     
-    // Web MVC for mock auth mode (gateway disabled in mock mode)
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    // WebFlux for mock auth mode (gateway disabled in mock mode) - MIGRATED TO WEBFLUX
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
+    
+    // Reactive HTTP Client for event publishing
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     
     // Servlet API for SAML
     implementation("jakarta.servlet:jakarta.servlet-api:6.0.0")
@@ -63,10 +66,11 @@ dependencies {
     // Logging
     implementation("net.logstash.logback:logstash-logback-encoder:7.4")
     
-    // Test dependencies
+    // Test dependencies - UPDATED FOR REACTIVE
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
     testImplementation("io.mockk:mockk:1.13.8")
+    testImplementation("io.projectreactor:reactor-test")
 }
 
 dependencyManagement {

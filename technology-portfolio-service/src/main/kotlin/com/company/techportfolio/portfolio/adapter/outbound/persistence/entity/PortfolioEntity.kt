@@ -2,15 +2,17 @@ package com.company.techportfolio.portfolio.adapter.out.persistence.entity
 
 import com.company.techportfolio.shared.domain.model.PortfolioType
 import com.company.techportfolio.shared.domain.model.PortfolioStatus
-import jakarta.persistence.*
+import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.time.LocalDateTime
 
 /**
- * Portfolio Entity - JPA Database Mapping
+ * Portfolio Entity - R2DBC Database Mapping
  * 
  * This entity class represents the database mapping for technology portfolios
- * in the persistence layer. It uses JPA annotations to define the table
- * structure, constraints, and relationships for portfolio data storage.
+ * in the persistence layer. It uses R2DBC annotations to define the table
+ * structure, constraints, and relationships for reactive portfolio data storage.
  * 
  * ## Database Mapping:
  * - **Table**: `portfolios`
@@ -31,6 +33,11 @@ import java.time.LocalDateTime
  * - Optionally belongs to an Organization (organization_id foreign key)
  * - Has many Technologies (one-to-many relationship)
  * 
+ * ## Reactive Features:
+ * - Non-blocking database operations
+ * - Reactive stream support
+ * - Optimized for reactive repositories
+ * 
  * @property id Unique identifier (auto-generated primary key)
  * @property name Portfolio name (unique, required, max length varies by DB)
  * @property description Optional portfolio description (TEXT field)
@@ -47,9 +54,8 @@ import java.time.LocalDateTime
  * @see PortfolioType
  * @see PortfolioStatus
  */
-@Entity
-@Table(name = "portfolios")
-class PortfolioEntity(
+@Table("portfolios")
+data class PortfolioEntity(
     /**
      * Unique identifier for the portfolio.
      * 
@@ -57,7 +63,6 @@ class PortfolioEntity(
      * Null for new entities before persistence.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
 
     /**
@@ -67,7 +72,7 @@ class PortfolioEntity(
      * Required field that serves as the primary human-readable identifier.
      * Database constraint enforces uniqueness.
      */
-    @Column(name = "name", nullable = false, unique = true)
+    @Column("name")
     val name: String,
 
     /**
@@ -76,7 +81,7 @@ class PortfolioEntity(
      * Stored as TEXT column to support longer descriptions.
      * Can be null for portfolios without detailed descriptions.
      */
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column("description")
     val description: String? = null,
 
     /**
@@ -85,8 +90,7 @@ class PortfolioEntity(
      * Enum value stored as string in the database for readability.
      * Required field that categorizes the portfolio's purpose and scope.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
+    @Column("type")
     val type: PortfolioType,
 
     /**
@@ -95,8 +99,7 @@ class PortfolioEntity(
      * Enum value stored as string in the database for readability.
      * Required field that indicates the portfolio's lifecycle state.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @Column("status")
     val status: PortfolioStatus,
 
     /**
@@ -105,7 +108,7 @@ class PortfolioEntity(
      * Used for soft deletion and filtering. Defaults to true.
      * Inactive portfolios are typically hidden from normal operations.
      */
-    @Column(name = "is_active", nullable = false)
+    @Column("is_active")
     val isActive: Boolean = true,
 
     /**
@@ -114,7 +117,7 @@ class PortfolioEntity(
      * Immutable field set once during initial creation.
      * Required field for audit trail and lifecycle tracking.
      */
-    @Column(name = "created_at", nullable = false)
+    @Column("created_at")
     val createdAt: LocalDateTime,
 
     /**
@@ -123,7 +126,7 @@ class PortfolioEntity(
      * Nullable field that gets updated on each modification.
      * Null for portfolios that have never been updated after creation.
      */
-    @Column(name = "updated_at")
+    @Column("updated_at")
     val updatedAt: LocalDateTime? = null,
 
     /**
@@ -132,7 +135,7 @@ class PortfolioEntity(
      * Required field that establishes ownership relationship.
      * References the user ID from the user management system.
      */
-    @Column(name = "owner_id", nullable = false)
+    @Column("owner_id")
     val ownerId: Long,
 
     /**
@@ -141,6 +144,6 @@ class PortfolioEntity(
      * Nullable field for multi-tenant organizational structure.
      * Personal portfolios may not belong to any organization.
      */
-    @Column(name = "organization_id")
+    @Column("organization_id")
     val organizationId: Long? = null
 )

@@ -7,18 +7,21 @@ import com.company.techportfolio.authorization.domain.service.AuthorizationServi
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import jakarta.validation.Valid
+import reactor.core.publisher.Mono
 
 /**
- * REST controller for authorization and permission management operations.
+ * REST controller for authorization and permission management operations (REACTIVE).
  * 
  * This controller provides HTTP endpoints for authorization decisions, permission
- * queries, and role verification within the technology portfolio system. It serves
- * as the primary inbound adapter for the authorization service, translating HTTP
- * requests into domain service calls.
+ * queries, and role verification within the technology portfolio system using
+ * reactive programming patterns. It serves as the primary inbound adapter for 
+ * the authorization service, translating HTTP requests into domain service calls
+ * using reactive streams.
  * 
  * The controller follows RESTful design principles and provides both synchronous
  * authorization checks and user permission queries. All endpoints return appropriate
  * HTTP status codes and structured responses for easy integration with client applications.
+ * All methods return Mono<ResponseEntity<T>> for non-blocking I/O operations.
  * 
  * Key endpoints:
  * - POST /api/authorization/check - Primary authorization decision endpoint
@@ -32,6 +35,7 @@ import jakarta.validation.Valid
  * - All endpoints should be protected by authentication middleware
  * - Sensitive authorization data is only returned for authorized requests
  * - Error responses avoid leaking sensitive system information
+ * - Reactive error handling with onErrorMap and onErrorResume
  * 
  * @property authorizationService Domain service for authorization operations
  * 
@@ -55,17 +59,22 @@ class AuthorizationController(
      * The endpoint returns HTTP 200 for authorized requests and HTTP 403 for
      * unauthorized requests, with detailed response information in both cases.
      * 
+     * **Reactive**: Returns Mono<ResponseEntity<AuthorizationResponse>>
+     * 
      * @param request The authorization request containing user, resource, action, and context
-     * @return ResponseEntity with AuthorizationResponse and appropriate HTTP status
+     * @return Mono<ResponseEntity<AuthorizationResponse>> with AuthorizationResponse and appropriate HTTP status
      */
     @PostMapping("/check")
-    fun checkAuthorization(@RequestBody @Valid request: AuthorizationRequest): ResponseEntity<AuthorizationResponse> {
-        val response = authorizationService.authorizeUser(request)
-        return if (response.isAuthorized) {
-            ResponseEntity.ok(response)
-        } else {
-            ResponseEntity.status(403).body(response)
-        }
+    fun checkAuthorization(@RequestBody @Valid request: AuthorizationRequest): Mono<ResponseEntity<AuthorizationResponse>> {
+        return Mono.fromCallable<AuthorizationResponse> { authorizationService.authorizeUser(request) }
+            .map { response ->
+                if (response.isAuthorized) {
+                    ResponseEntity.ok(response)
+                } else {
+                    ResponseEntity.status(403).body(response)
+                }
+            }
+            .onErrorReturn(ResponseEntity.internalServerError().build())
     }
 
     /**
@@ -75,13 +84,16 @@ class AuthorizationController(
      * and authorization context. It's useful for building user dashboards,
      * permission summaries, or caching authorization data.
      * 
+     * **Reactive**: Returns Mono<ResponseEntity<UserPermissions>>
+     * 
      * @param username The username to retrieve permissions for
-     * @return ResponseEntity containing UserPermissions object
+     * @return Mono<ResponseEntity<UserPermissions>> containing UserPermissions object
      */
     @GetMapping("/permissions")
-    fun getUserPermissions(@RequestParam username: String): ResponseEntity<UserPermissions> {
-        val permissions = authorizationService.getUserPermissions(username)
-        return ResponseEntity.ok(permissions)
+    fun getUserPermissions(@RequestParam username: String): Mono<ResponseEntity<UserPermissions>> {
+        return Mono.fromCallable<UserPermissions> { authorizationService.getUserPermissions(username) }
+            .map { permissions -> ResponseEntity.ok(permissions) }
+            .onErrorReturn(ResponseEntity.notFound().build())
     }
 
     /**
@@ -91,17 +103,20 @@ class AuthorizationController(
      * It's useful for role-based access control scenarios where specific
      * roles are required for certain operations.
      * 
+     * **Reactive**: Returns Mono<ResponseEntity<Boolean>>
+     * 
      * @param username The username to check roles for
      * @param role The role name to verify
-     * @return ResponseEntity containing boolean result
+     * @return Mono<ResponseEntity<Boolean>> containing boolean result
      */
     @GetMapping("/has-role")
     fun hasRole(
         @RequestParam username: String,
         @RequestParam role: String
-    ): ResponseEntity<Boolean> {
-        val hasRole = authorizationService.hasRole(username, role)
-        return ResponseEntity.ok(hasRole)
+    ): Mono<ResponseEntity<Boolean>> {
+        return Mono.fromCallable<Boolean> { authorizationService.hasRole(username, role) }
+            .map { hasRole -> ResponseEntity.ok(hasRole) }
+            .onErrorReturn(ResponseEntity.internalServerError().build())
     }
 
     /**
@@ -110,6 +125,8 @@ class AuthorizationController(
      * This endpoint accepts a list of roles and returns true if the user
      * has at least one of them. It's useful for scenarios where multiple
      * roles can provide the same level of access.
+     * 
+     * **Reactive**: Returns Mono<ResponseEntity<Boolean>>
      * 
      * Request body format:
      * ```json
@@ -120,16 +137,18 @@ class AuthorizationController(
      * ```
      * 
      * @param request Map containing username and list of roles to check
-     * @return ResponseEntity containing boolean result
+     * @return Mono<ResponseEntity<Boolean>> containing boolean result
      */
     @PostMapping("/has-any-role")
     fun hasAnyRole(
         @RequestBody request: Map<String, Any>
-    ): ResponseEntity<Boolean> {
+    ): Mono<ResponseEntity<Boolean>> {
         val username = request["username"] as String
         val roles = request["roles"] as List<String>
-        val hasAnyRole = authorizationService.hasAnyRole(username, roles)
-        return ResponseEntity.ok(hasAnyRole)
+        
+        return Mono.fromCallable<Boolean> { authorizationService.hasAnyRole(username, roles) }
+            .map { hasAnyRole -> ResponseEntity.ok(hasAnyRole) }
+            .onErrorReturn(ResponseEntity.internalServerError().build())
     }
 
     /**
@@ -139,19 +158,22 @@ class AuthorizationController(
      * resource-action combinations. It considers both direct permissions and
      * permissions inherited through role assignments.
      * 
+     * **Reactive**: Returns Mono<ResponseEntity<Boolean>>
+     * 
      * @param username The username to check permissions for
      * @param resource The resource being accessed (e.g., "portfolio", "technology")
      * @param action The action being performed (e.g., "READ", "WRITE", "DELETE")
-     * @return ResponseEntity containing boolean result
+     * @return Mono<ResponseEntity<Boolean>> containing boolean result
      */
     @GetMapping("/has-permission")
     fun hasPermission(
         @RequestParam username: String,
         @RequestParam resource: String,
         @RequestParam action: String
-    ): ResponseEntity<Boolean> {
-        val hasPermission = authorizationService.hasPermission(username, resource, action)
-        return ResponseEntity.ok(hasPermission)
+    ): Mono<ResponseEntity<Boolean>> {
+        return Mono.fromCallable<Boolean> { authorizationService.hasPermission(username, resource, action) }
+            .map { hasPermission -> ResponseEntity.ok(hasPermission) }
+            .onErrorReturn(ResponseEntity.internalServerError().build())
     }
 
     /**
@@ -161,10 +183,12 @@ class AuthorizationController(
      * returning service status and identification information. It's used by
      * monitoring systems, load balancers, and service discovery mechanisms.
      * 
-     * @return ResponseEntity containing health status information
+     * **Reactive**: Returns Mono<ResponseEntity<Map<String, String>>>
+     * 
+     * @return Mono<ResponseEntity<Map<String, String>>> containing health status information
      */
     @GetMapping("/health")
-    fun health(): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.ok(mapOf("status" to "UP", "service" to "authorization"))
+    fun health(): Mono<ResponseEntity<Map<String, String>>> {
+        return Mono.just(ResponseEntity.ok(mapOf("status" to "UP", "service" to "authorization")))
     }
 } 

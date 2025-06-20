@@ -1,15 +1,8 @@
 spring:
-  datasource:
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+  r2dbc:
+    url: r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
     password: 
-    driver-class-name: org.h2.Driver
-  
-  jpa:
-    hibernate:
-      ddl-auto: create-drop
-    database-platform: org.hibernate.dialect.H2Dialect
-    show-sql: true
   
   flyway:
     enabled: false
@@ -20,12 +13,12 @@ spring:
       import-check:
         enabled: false
   
+  # Simplified JWT Security Configuration for Tests
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: http://test-auth-server
-          jwk-set-uri: http://test-auth-server/.well-known/jwks.json
+          secret: test-secret-key-for-unit-tests-only-not-for-production
 
 server:
   port: 0

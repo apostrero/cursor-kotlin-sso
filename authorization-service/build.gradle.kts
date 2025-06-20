@@ -27,7 +27,7 @@ tasks.withType<Test> {
 }
 
 dependencies {
-    implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
@@ -54,14 +54,11 @@ dependencies {
     // Logging
     implementation("net.logstash.logback:logstash-logback-encoder:7.4")
     
-    // Testing
+    // Testing - UPDATED FOR REACTIVE
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:junit-jupiter")
-    testImplementation("org.testcontainers:postgresql")
-    testImplementation("io.mockk:mockk:1.13.8")
-    testImplementation("com.ninja-squad:springmockk:4.0.2")
-    testImplementation("com.h2database:h2")
+    testImplementation("io.projectreactor:reactor-test")
 }
 
 dependencyManagement {

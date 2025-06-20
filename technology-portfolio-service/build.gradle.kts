@@ -1,7 +1,6 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.spring")
-    kotlin("plugin.jpa")
     id("org.springframework.boot")
     id("io.spring.dependency-management")
     jacoco
@@ -50,17 +49,17 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.micrometer:micrometer-registry-prometheus")
     
-    // Spring Boot Starters
-    implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+    // Spring Boot Starters - MIGRATED TO WEBFLUX
+    implementation("org.springframework.boot:spring-boot-starter-webflux")
+    implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
     implementation("org.springframework.boot:spring-boot-starter-security")
     
     // OAuth2 and JWT
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.security:spring-security-oauth2-jose")
     
-    // Database
-    implementation("org.postgresql:postgresql:42.7.4")
+    // Database - MIGRATED TO R2DBC
+    implementation("org.postgresql:r2dbc-postgresql:1.0.4.RELEASE")
     implementation("org.flywaydb:flyway-core:11.9.1")
     implementation("org.flywaydb:flyway-database-postgresql:11.9.1")
     
@@ -73,14 +72,20 @@ dependencies {
     // Logging
     implementation("net.logstash.logback:logstash-logback-encoder:7.4")
     
-    // Testing
+    // Testing - UPDATED FOR REACTIVE
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:postgresql:1.19.3")
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
     testImplementation("io.mockk:mockk:1.13.8")
-    testImplementation("com.h2database:h2")
+    testImplementation("io.r2dbc:r2dbc-h2")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")
+    testImplementation("io.projectreactor:reactor-test")
+    
+    // JWT for testing
+    testImplementation("io.jsonwebtoken:jjwt-api:0.11.5")
+    testImplementation("io.jsonwebtoken:jjwt-impl:0.11.5")
+    testImplementation("io.jsonwebtoken:jjwt-jackson:0.11.5")
 }
 
 dependencyManagement {

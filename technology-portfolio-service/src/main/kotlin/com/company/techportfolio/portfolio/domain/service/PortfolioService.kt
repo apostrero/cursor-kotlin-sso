@@ -18,15 +18,18 @@ import com.company.techportfolio.shared.domain.event.PortfolioUpdatedEvent
 import com.company.techportfolio.shared.domain.event.TechnologyAddedEvent
 import com.company.techportfolio.shared.domain.event.TechnologyRemovedEvent
 import org.springframework.stereotype.Service
+import reactor.core.publisher.Mono
+import reactor.core.publisher.Flux
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
- * Portfolio Service - Core Business Logic
+ * Portfolio Service - Core Business Logic (REACTIVE)
  * 
  * This service class implements the core business logic for technology portfolio
- * management within the hexagonal architecture. It orchestrates portfolio and
- * technology operations while maintaining business rules and data consistency.
+ * management within the hexagonal architecture using reactive programming patterns.
+ * It orchestrates portfolio and technology operations while maintaining business
+ * rules and data consistency.
  * 
  * ## Business Responsibilities:
  * - Portfolio lifecycle management (create, update, delete)
@@ -35,6 +38,12 @@ import java.time.LocalDateTime
  * - Business rule enforcement and validation
  * - Event publishing for domain state changes
  * - Multi-tenant organization support
+ * 
+ * ## Reactive Design:
+ * - All methods return Mono<T> for single operations or Flux<T> for collections
+ * - Supports reactive error handling with onErrorMap and onErrorResume
+ * - Enables reactive transaction management
+ * - Provides backpressure handling for large datasets
  * 
  * ## Architecture Role:
  * This service sits in the **Application Layer** and coordinates between:
@@ -88,46 +97,54 @@ class PortfolioService(
      * - Owner ID must be provided and valid
      * - Organization ID is optional for personal portfolios
      * 
+     * **Reactive**: Returns Mono<PortfolioResponse>
+     * 
      * @param request The portfolio creation request containing required data
-     * @return PortfolioResponse with complete portfolio information
+     * @return Mono<PortfolioResponse> with complete portfolio information
      * @throws RuntimeException if portfolio creation fails or name already exists
      * @throws IllegalArgumentException if request data is invalid
      */
-    fun createPortfolio(request: CreatePortfolioRequest): PortfolioResponse {
-        return try {
-            // Check if portfolio with same name already exists
-            val existingPortfolio = portfolioRepository.findByName(request.name)
-            if (existingPortfolio != null) {
-                throw IllegalArgumentException("Portfolio with name '${request.name}' already exists")
-            }
-
-            val portfolio = TechnologyPortfolio(
-                name = request.name,
-                description = request.description,
-                type = request.type,
-                status = PortfolioStatus.ACTIVE,
-                isActive = true,
-                createdAt = LocalDateTime.now(),
-                ownerId = request.ownerId,
-                organizationId = request.organizationId
-            )
-
-            val savedPortfolio = portfolioRepository.save(portfolio)
-
-            // Publish event
-            eventPublisher.publish(
-                PortfolioCreatedEvent(
-                    portfolioId = savedPortfolio.id!!,
-                    name = savedPortfolio.name,
-                    ownerId = savedPortfolio.ownerId,
-                    organizationId = savedPortfolio.organizationId
+    fun createPortfolio(request: CreatePortfolioRequest): Mono<PortfolioResponse> {
+        return portfolioRepository.findByName(request.name)
+            .flatMap { existingPortfolio ->
+                Mono.error<PortfolioResponse>(
+                    IllegalArgumentException("Portfolio with name '${request.name}' already exists")
                 )
-            )
+            }
+            .switchIfEmpty(
+                Mono.defer {
+                    val portfolio = TechnologyPortfolio(
+                        name = request.name,
+                        description = request.description,
+                        type = request.type,
+                        status = PortfolioStatus.ACTIVE,
+                        isActive = true,
+                        createdAt = LocalDateTime.now(),
+                        ownerId = request.ownerId,
+                        organizationId = request.organizationId
+                    )
 
-            toPortfolioResponse(savedPortfolio)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to create portfolio: ${e.message}", e)
-        }
+                    portfolioRepository.save(portfolio)
+                        .flatMap { savedPortfolio ->
+                            // Publish event
+                            eventPublisher.publish(
+                                PortfolioCreatedEvent(
+                                    portfolioId = savedPortfolio.id!!,
+                                    name = savedPortfolio.name,
+                                    ownerId = savedPortfolio.ownerId,
+                                    organizationId = savedPortfolio.organizationId
+                                )
+                            ).then(Mono.just(savedPortfolio))
+                        }
+                        .map { toPortfolioResponse(it) }
+                }
+            )
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to create portfolio: ${error.message}", error)
+                }
+            }
     }
 
     /**
@@ -143,44 +160,53 @@ class PortfolioService(
      * - Updated timestamp is automatically set
      * - Status transitions are validated
      * 
+     * **Reactive**: Returns Mono<PortfolioResponse>
+     * 
      * @param portfolioId The ID of the portfolio to update
      * @param request The update request with optional field changes
-     * @return PortfolioResponse with updated portfolio information
+     * @return Mono<PortfolioResponse> with updated portfolio information
      * @throws RuntimeException if update fails or portfolio not found
      * @throws IllegalArgumentException if portfolio ID is invalid
      */
-    fun updatePortfolio(portfolioId: Long, request: UpdatePortfolioRequest): PortfolioResponse {
-        return try {
-            val existingPortfolio = portfolioRepository.findById(portfolioId)
-                ?: throw IllegalArgumentException("Portfolio with id $portfolioId not found")
-
-            val updatedPortfolio = existingPortfolio.copy(
-                name = request.name ?: existingPortfolio.name,
-                description = request.description ?: existingPortfolio.description,
-                type = request.type ?: existingPortfolio.type,
-                status = request.status ?: existingPortfolio.status,
-                updatedAt = LocalDateTime.now()
-            )
-
-            val savedPortfolio = portfolioRepository.update(updatedPortfolio)
-
-            // Publish event
-            eventPublisher.publish(
-                PortfolioUpdatedEvent(
-                    portfolioId = savedPortfolio.id!!,
-                    changes = mapOf(
-                        "name" to (request.name ?: ""),
-                        "description" to (request.description ?: ""),
-                        "type" to (request.type?.name ?: ""),
-                        "status" to (request.status?.name ?: "")
-                    )
+    fun updatePortfolio(portfolioId: Long, request: UpdatePortfolioRequest): Mono<PortfolioResponse> {
+        return portfolioRepository.findById(portfolioId)
+            .switchIfEmpty(
+                Mono.error<TechnologyPortfolio>(
+                    IllegalArgumentException("Portfolio with id $portfolioId not found")
                 )
             )
+            .flatMap { existingPortfolio ->
+                val updatedPortfolio = existingPortfolio.copy(
+                    name = request.name ?: existingPortfolio.name,
+                    description = request.description ?: existingPortfolio.description,
+                    type = request.type ?: existingPortfolio.type,
+                    status = request.status ?: existingPortfolio.status,
+                    updatedAt = LocalDateTime.now()
+                )
 
-            toPortfolioResponse(savedPortfolio)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to update portfolio: ${e.message}", e)
-        }
+                portfolioRepository.update(updatedPortfolio)
+                    .flatMap { savedPortfolio ->
+                        // Publish event
+                        eventPublisher.publish(
+                            PortfolioUpdatedEvent(
+                                portfolioId = savedPortfolio.id!!,
+                                changes = mapOf(
+                                    "name" to (request.name ?: ""),
+                                    "description" to (request.description ?: ""),
+                                    "type" to (request.type?.name ?: ""),
+                                    "status" to (request.status?.name ?: "")
+                                )
+                            )
+                        ).then(Mono.just(savedPortfolio))
+                    }
+                    .map { toPortfolioResponse(it) }
+            }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to update portfolio: ${error.message}", error)
+                }
+            }
     }
 
     /**
@@ -190,43 +216,66 @@ class PortfolioService(
      * technologies, calculated costs, and metadata. This is the primary
      * method for retrieving detailed portfolio information.
      * 
+     * **Reactive**: Returns Mono<PortfolioResponse>
+     * 
      * @param portfolioId The unique identifier of the portfolio
-     * @return PortfolioResponse with complete portfolio details and technologies
+     * @return Mono<PortfolioResponse> with complete portfolio details and technologies
      * @throws IllegalArgumentException if portfolio with given ID doesn't exist
      */
-    fun getPortfolio(portfolioId: Long): PortfolioResponse {
-        val portfolio = portfolioRepository.findById(portfolioId)
-            ?: throw IllegalArgumentException("Portfolio with id $portfolioId not found")
-        
-        return toPortfolioResponse(portfolio)
+    fun getPortfolio(portfolioId: Long): Mono<PortfolioResponse> {
+        return portfolioRepository.findById(portfolioId)
+            .switchIfEmpty(
+                Mono.error<TechnologyPortfolio>(
+                    IllegalArgumentException("Portfolio with id $portfolioId not found")
+                )
+            )
+            .map { toPortfolioResponse(it) }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to retrieve portfolio: ${error.message}", error)
+                }
+            }
     }
 
     /**
      * Retrieves portfolio summaries owned by a specific user.
      * 
-     * Returns a lightweight list of portfolio summaries for efficient
+     * Returns a reactive stream of portfolio summaries for efficient
      * listing and overview purposes. This method is optimized for
      * performance and doesn't include full technology details.
      * 
+     * **Reactive**: Returns Flux<PortfolioSummary>
+     * 
      * @param ownerId The ID of the user who owns the portfolios
-     * @return List of PortfolioSummary objects for the specified owner
+     * @return Flux<PortfolioSummary> with user's portfolio summaries
      */
-    fun getPortfoliosByOwner(ownerId: Long): List<PortfolioSummary> {
+    fun getPortfoliosByOwner(ownerId: Long): Flux<PortfolioSummary> {
         return portfolioQueryRepository.findPortfolioSummariesByOwner(ownerId)
+            .onErrorResume { error ->
+                println("Error retrieving portfolios for owner $ownerId: ${error.message}")
+                Flux.empty()
+            }
     }
 
     /**
      * Retrieves portfolio summaries for a specific organization.
      * 
-     * Returns all portfolios belonging to an organization, typically
-     * used by administrators to view organizational portfolio inventory.
+     * Returns a reactive stream of portfolio summaries for an organization,
+     * typically used by administrators to view organizational portfolio inventory.
      * This method supports multi-tenant architecture.
      * 
+     * **Reactive**: Returns Flux<PortfolioSummary>
+     * 
      * @param organizationId The ID of the organization
-     * @return List of PortfolioSummary objects for the specified organization
+     * @return Flux<PortfolioSummary> with organization's portfolio summaries
      */
-    fun getPortfoliosByOrganization(organizationId: Long): List<PortfolioSummary> {
+    fun getPortfoliosByOrganization(organizationId: Long): Flux<PortfolioSummary> {
         return portfolioQueryRepository.findPortfolioSummariesByOrganization(organizationId)
+            .onErrorResume { error ->
+                println("Error retrieving portfolios for organization $organizationId: ${error.message}")
+                Flux.empty()
+            }
     }
 
     /**
@@ -236,14 +285,20 @@ class PortfolioService(
      * All parameters are optional, allowing for flexible search combinations.
      * This method is optimized for search performance and pagination.
      * 
+     * **Reactive**: Returns Flux<PortfolioSummary>
+     * 
      * @param name Optional name filter (partial matching supported)
      * @param type Optional portfolio type filter
      * @param status Optional portfolio status filter
      * @param organizationId Optional organization scope filter
-     * @return List of PortfolioSummary objects matching the search criteria
+     * @return Flux<PortfolioSummary> with matching portfolio summaries
      */
-    fun searchPortfolios(name: String?, type: PortfolioType?, status: PortfolioStatus?, organizationId: Long?): List<PortfolioSummary> {
+    fun searchPortfolios(name: String?, type: PortfolioType?, status: PortfolioStatus?, organizationId: Long?): Flux<PortfolioSummary> {
         return portfolioQueryRepository.searchPortfolios(name, type, status, organizationId)
+            .onErrorResume { error ->
+                println("Error searching portfolios: ${error.message}")
+                Flux.empty()
+            }
     }
 
     /**
@@ -259,51 +314,60 @@ class PortfolioService(
      * - Cost information is optional but recommended for tracking
      * - New technologies are created with active status
      * 
+     * **Reactive**: Returns Mono<TechnologyResponse>
+     * 
      * @param portfolioId The ID of the portfolio to add the technology to
      * @param request The technology creation request with required data
-     * @return TechnologyResponse with complete technology information
+     * @return Mono<TechnologyResponse> with complete technology information
      * @throws RuntimeException if technology addition fails
      * @throws IllegalArgumentException if portfolio doesn't exist
      */
-    fun addTechnology(portfolioId: Long, request: AddTechnologyRequest): TechnologyResponse {
-        return try {
-            val portfolio = portfolioRepository.findById(portfolioId)
-                ?: throw IllegalArgumentException("Portfolio with id $portfolioId not found")
-
-            val technology = Technology(
-                name = request.name,
-                description = request.description,
-                category = request.category,
-                version = request.version,
-                type = request.type,
-                maturityLevel = request.maturityLevel,
-                riskLevel = request.riskLevel,
-                annualCost = request.annualCost,
-                licenseCost = request.licenseCost,
-                maintenanceCost = request.maintenanceCost,
-                vendorName = request.vendorName,
-                vendorContact = request.vendorContact,
-                supportContractExpiry = request.supportContractExpiry,
-                isActive = true,
-                createdAt = LocalDateTime.now(),
-                portfolioId = portfolioId
-            )
-
-            val savedTechnology = technologyRepository.save(technology)
-
-            // Publish event
-            eventPublisher.publish(
-                TechnologyAddedEvent(
-                    portfolioId = portfolioId,
-                    technologyId = savedTechnology.id!!,
-                    technologyName = savedTechnology.name
+    fun addTechnology(portfolioId: Long, request: AddTechnologyRequest): Mono<TechnologyResponse> {
+        return portfolioRepository.findById(portfolioId)
+            .switchIfEmpty(
+                Mono.error<TechnologyPortfolio>(
+                    IllegalArgumentException("Portfolio with id $portfolioId not found")
                 )
             )
+            .flatMap { portfolio ->
+                val technology = Technology(
+                    name = request.name,
+                    description = request.description,
+                    category = request.category,
+                    version = request.version,
+                    type = request.type,
+                    maturityLevel = request.maturityLevel,
+                    riskLevel = request.riskLevel,
+                    annualCost = request.annualCost,
+                    licenseCost = request.licenseCost,
+                    maintenanceCost = request.maintenanceCost,
+                    vendorName = request.vendorName,
+                    vendorContact = request.vendorContact,
+                    supportContractExpiry = request.supportContractExpiry,
+                    isActive = true,
+                    createdAt = LocalDateTime.now(),
+                    portfolioId = portfolioId
+                )
 
-            toTechnologyResponse(savedTechnology)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to add technology: ${e.message}", e)
-        }
+                technologyRepository.save(technology)
+                    .flatMap { savedTechnology ->
+                        // Publish event
+                        eventPublisher.publish(
+                            TechnologyAddedEvent(
+                                portfolioId = portfolioId,
+                                technologyId = savedTechnology.id!!,
+                                technologyName = savedTechnology.name
+                            )
+                        ).then(Mono.just(savedTechnology))
+                    }
+                    .map { toTechnologyResponse(it) }
+            }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to add technology: ${error.message}", error)
+                }
+            }
     }
 
     /**
@@ -313,39 +377,48 @@ class PortfolioService(
      * vendor details, and lifecycle metadata. Only non-null fields in the
      * request are updated, enabling partial updates.
      * 
+     * **Reactive**: Returns Mono<TechnologyResponse>
+     * 
      * @param technologyId The ID of the technology to update
      * @param request The update request with optional field changes
-     * @return TechnologyResponse with updated technology information
+     * @return Mono<TechnologyResponse> with updated technology information
      * @throws RuntimeException if update fails
      * @throws IllegalArgumentException if technology doesn't exist
      */
-    fun updateTechnology(technologyId: Long, request: UpdateTechnologyRequest): TechnologyResponse {
-        return try {
-            val existingTechnology = technologyRepository.findById(technologyId)
-                ?: throw IllegalArgumentException("Technology with id $technologyId not found")
-
-            val updatedTechnology = existingTechnology.copy(
-                name = request.name ?: existingTechnology.name,
-                description = request.description ?: existingTechnology.description,
-                category = request.category ?: existingTechnology.category,
-                version = request.version ?: existingTechnology.version,
-                type = request.type ?: existingTechnology.type,
-                maturityLevel = request.maturityLevel ?: existingTechnology.maturityLevel,
-                riskLevel = request.riskLevel ?: existingTechnology.riskLevel,
-                annualCost = request.annualCost ?: existingTechnology.annualCost,
-                licenseCost = request.licenseCost ?: existingTechnology.licenseCost,
-                maintenanceCost = request.maintenanceCost ?: existingTechnology.maintenanceCost,
-                vendorName = request.vendorName ?: existingTechnology.vendorName,
-                vendorContact = request.vendorContact ?: existingTechnology.vendorContact,
-                supportContractExpiry = request.supportContractExpiry ?: existingTechnology.supportContractExpiry,
-                updatedAt = LocalDateTime.now()
+    fun updateTechnology(technologyId: Long, request: UpdateTechnologyRequest): Mono<TechnologyResponse> {
+        return technologyRepository.findById(technologyId)
+            .switchIfEmpty(
+                Mono.error<Technology>(
+                    IllegalArgumentException("Technology with id $technologyId not found")
+                )
             )
+            .flatMap { existingTechnology ->
+                val updatedTechnology = existingTechnology.copy(
+                    name = request.name ?: existingTechnology.name,
+                    description = request.description ?: existingTechnology.description,
+                    category = request.category ?: existingTechnology.category,
+                    version = request.version ?: existingTechnology.version,
+                    type = request.type ?: existingTechnology.type,
+                    maturityLevel = request.maturityLevel ?: existingTechnology.maturityLevel,
+                    riskLevel = request.riskLevel ?: existingTechnology.riskLevel,
+                    annualCost = request.annualCost ?: existingTechnology.annualCost,
+                    licenseCost = request.licenseCost ?: existingTechnology.licenseCost,
+                    maintenanceCost = request.maintenanceCost ?: existingTechnology.maintenanceCost,
+                    vendorName = request.vendorName ?: existingTechnology.vendorName,
+                    vendorContact = request.vendorContact ?: existingTechnology.vendorContact,
+                    supportContractExpiry = request.supportContractExpiry ?: existingTechnology.supportContractExpiry,
+                    updatedAt = LocalDateTime.now()
+                )
 
-            val savedTechnology = technologyRepository.update(updatedTechnology)
-            toTechnologyResponse(savedTechnology)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to update technology: ${e.message}", e)
-        }
+                technologyRepository.update(updatedTechnology)
+                    .map { toTechnologyResponse(it) }
+            }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to update technology: ${error.message}", error)
+                }
+            }
     }
 
     /**
@@ -355,29 +428,46 @@ class PortfolioService(
      * cost information, and vendor details. This is the primary method
      * for retrieving detailed technology information.
      * 
+     * **Reactive**: Returns Mono<TechnologyResponse>
+     * 
      * @param technologyId The unique identifier of the technology
-     * @return TechnologyResponse with complete technology details
+     * @return Mono<TechnologyResponse> with complete technology details
      * @throws IllegalArgumentException if technology with given ID doesn't exist
      */
-    fun getTechnology(technologyId: Long): TechnologyResponse {
-        val technology = technologyRepository.findById(technologyId)
-            ?: throw IllegalArgumentException("Technology with id $technologyId not found")
-        
-        return toTechnologyResponse(technology)
+    fun getTechnology(technologyId: Long): Mono<TechnologyResponse> {
+        return technologyRepository.findById(technologyId)
+            .switchIfEmpty(
+                Mono.error<Technology>(
+                    IllegalArgumentException("Technology with id $technologyId not found")
+                )
+            )
+            .map { toTechnologyResponse(it) }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to retrieve technology: ${error.message}", error)
+                }
+            }
     }
 
     /**
      * Retrieves technology summaries for a specific portfolio.
      * 
-     * Returns a lightweight list of technology summaries for efficient
+     * Returns a reactive stream of technology summaries for efficient
      * listing and overview purposes. This method is optimized for
      * performance and includes essential technology information.
      * 
+     * **Reactive**: Returns Flux<TechnologySummary>
+     * 
      * @param portfolioId The ID of the portfolio containing the technologies
-     * @return List of TechnologySummary objects for the specified portfolio
+     * @return Flux<TechnologySummary> with portfolio's technology summaries
      */
-    fun getTechnologiesByPortfolio(portfolioId: Long): List<TechnologySummary> {
+    fun getTechnologiesByPortfolio(portfolioId: Long): Flux<TechnologySummary> {
         return technologyQueryRepository.findTechnologySummariesByPortfolio(portfolioId)
+            .onErrorResume { error ->
+                println("Error retrieving technologies for portfolio $portfolioId: ${error.message}")
+                Flux.empty()
+            }
     }
 
     /**
@@ -392,39 +482,52 @@ class PortfolioService(
      * - Technology must belong to the specified portfolio
      * - Removal is permanent and cannot be undone
      * 
+     * **Reactive**: Returns Mono<Boolean>
+     * 
      * @param portfolioId The ID of the portfolio containing the technology
      * @param technologyId The ID of the technology to remove
-     * @return true if technology was successfully removed, false otherwise
+     * @return Mono<Boolean> with true if technology was successfully removed, false otherwise
      * @throws RuntimeException if removal fails
      * @throws IllegalArgumentException if portfolio or technology doesn't exist or don't match
      */
-    fun removeTechnology(portfolioId: Long, technologyId: Long): Boolean {
-        return try {
-            val portfolio = portfolioRepository.findById(portfolioId)
-                ?: throw IllegalArgumentException("Portfolio with id $portfolioId not found")
-
-            val technology = technologyRepository.findById(technologyId)
-                ?: throw IllegalArgumentException("Technology with id $technologyId not found")
-
+    fun removeTechnology(portfolioId: Long, technologyId: Long): Mono<Boolean> {
+        return Mono.zip(
+            portfolioRepository.findById(portfolioId),
+            technologyRepository.findById(technologyId)
+        )
+        .switchIfEmpty(
+            Mono.error<Pair<TechnologyPortfolio, Technology>>(
+                IllegalArgumentException("Portfolio with id $portfolioId or Technology with id $technologyId not found")
+            )
+        )
+        .flatMap { (portfolio, technology) ->
             if (technology.portfolioId != portfolioId) {
-                throw IllegalArgumentException("Technology does not belong to the specified portfolio")
-            }
-
-            val deleted = technologyRepository.delete(technologyId)
-            if (deleted) {
-                // Publish event
-                eventPublisher.publish(
-                    TechnologyRemovedEvent(
-                        portfolioId = portfolioId,
-                        technologyId = technologyId,
-                        technologyName = technology.name
-                    )
+                Mono.error<Boolean>(
+                    IllegalArgumentException("Technology does not belong to the specified portfolio")
                 )
+            } else {
+                technologyRepository.delete(technologyId)
+                    .flatMap { deleted ->
+                        if (deleted) {
+                            // Publish event
+                            eventPublisher.publish(
+                                TechnologyRemovedEvent(
+                                    portfolioId = portfolioId,
+                                    technologyId = technologyId,
+                                    technologyName = technology.name
+                                )
+                            ).thenReturn(true)
+                        } else {
+                            Mono.just(false)
+                        }
+                    }
             }
-
-            deleted
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to remove technology: ${e.message}", e)
+        }
+        .onErrorMap { error ->
+            when (error) {
+                is IllegalArgumentException -> error
+                else -> RuntimeException("Failed to remove technology: ${error.message}", error)
+            }
         }
     }
 
@@ -440,26 +543,38 @@ class PortfolioService(
      * - Portfolio must be empty (no technologies) before deletion
      * - Deletion is permanent and cannot be undone
      * 
+     * **Reactive**: Returns Mono<Boolean>
+     * 
      * @param portfolioId The ID of the portfolio to delete
-     * @return true if portfolio was successfully deleted, false otherwise
+     * @return Mono<Boolean> with true if portfolio was successfully deleted, false otherwise
      * @throws RuntimeException if deletion fails
      * @throws IllegalArgumentException if portfolio doesn't exist or contains technologies
      */
-    fun deletePortfolio(portfolioId: Long): Boolean {
-        return try {
-            val portfolio = portfolioRepository.findById(portfolioId)
-                ?: throw IllegalArgumentException("Portfolio with id $portfolioId not found")
-
-            // Check if portfolio has technologies
-            val technologyCount = technologyRepository.countByPortfolioId(portfolioId)
-            if (technologyCount > 0) {
-                throw IllegalArgumentException("Cannot delete portfolio with technologies. Remove all technologies first.")
+    fun deletePortfolio(portfolioId: Long): Mono<Boolean> {
+        return portfolioRepository.findById(portfolioId)
+            .switchIfEmpty(
+                Mono.error<TechnologyPortfolio>(
+                    IllegalArgumentException("Portfolio with id $portfolioId not found")
+                )
+            )
+            .flatMap { portfolio ->
+                technologyRepository.countByPortfolioId(portfolioId)
+                    .flatMap { technologyCount ->
+                        if (technologyCount > 0) {
+                            Mono.error<Boolean>(
+                                IllegalArgumentException("Cannot delete portfolio with technologies. Remove all technologies first.")
+                            )
+                        } else {
+                            portfolioRepository.delete(portfolioId)
+                        }
+                    }
             }
-
-            portfolioRepository.delete(portfolioId)
-        } catch (e: Exception) {
-            throw RuntimeException("Failed to delete portfolio: ${e.message}", e)
-        }
+            .onErrorMap { error ->
+                when (error) {
+                    is IllegalArgumentException -> error
+                    else -> RuntimeException("Failed to delete portfolio: ${error.message}", error)
+                }
+            }
     }
 
     /**
@@ -469,30 +584,35 @@ class PortfolioService(
      * external API response format. It includes technology aggregation and
      * cost calculations for comprehensive portfolio information.
      * 
+     * **Reactive**: Returns Mono<PortfolioResponse>
+     * 
      * @param portfolio The domain portfolio entity to convert
-     * @return PortfolioResponse with complete portfolio information and calculated fields
+     * @return Mono<PortfolioResponse> with complete portfolio information and calculated fields
      */
-    private fun toPortfolioResponse(portfolio: TechnologyPortfolio): PortfolioResponse {
-        val technologies = technologyRepository.findByPortfolioId(portfolio.id!!)
-        val totalAnnualCost = technologies
-            .mapNotNull { it.annualCost }
-            .reduceOrNull { acc, cost -> acc + cost }
+    private fun toPortfolioResponse(portfolio: TechnologyPortfolio): Mono<PortfolioResponse> {
+        return technologyRepository.findByPortfolioId(portfolio.id!!)
+            .collectList()
+            .map { technologies ->
+                val totalAnnualCost = technologies
+                    .mapNotNull { it.annualCost }
+                    .reduceOrNull { acc, cost -> acc + cost }
 
-        return PortfolioResponse(
-            id = portfolio.id!!,
-            name = portfolio.name,
-            description = portfolio.description,
-            type = portfolio.type,
-            status = portfolio.status,
-            isActive = portfolio.isActive,
-            createdAt = portfolio.createdAt,
-            updatedAt = portfolio.updatedAt,
-            ownerId = portfolio.ownerId,
-            organizationId = portfolio.organizationId,
-            technologyCount = technologies.size,
-            totalAnnualCost = totalAnnualCost,
-            technologies = technologies.map { toTechnologyResponse(it) }
-        )
+                PortfolioResponse(
+                    id = portfolio.id!!,
+                    name = portfolio.name,
+                    description = portfolio.description,
+                    type = portfolio.type,
+                    status = portfolio.status,
+                    isActive = portfolio.isActive,
+                    createdAt = portfolio.createdAt,
+                    updatedAt = portfolio.updatedAt,
+                    ownerId = portfolio.ownerId,
+                    organizationId = portfolio.organizationId,
+                    technologyCount = technologies.size.toLong(),
+                    totalAnnualCost = totalAnnualCost,
+                    technologies = technologies.map { toTechnologyResponseSync(it) }
+                )
+            }
     }
 
     /**
@@ -502,10 +622,22 @@ class PortfolioService(
      * external API response format. It includes all technology metadata and
      * cost information for comprehensive technology details.
      * 
+     * **Reactive**: Returns Mono<TechnologyResponse>
+     * 
+     * @param technology The domain technology entity to convert
+     * @return Mono<TechnologyResponse> with complete technology information
+     */
+    private fun toTechnologyResponse(technology: Technology): Mono<TechnologyResponse> {
+        return Mono.just(toTechnologyResponseSync(technology))
+    }
+
+    /**
+     * Synchronous version of toTechnologyResponse for use in collections.
+     * 
      * @param technology The domain technology entity to convert
      * @return TechnologyResponse with complete technology information
      */
-    private fun toTechnologyResponse(technology: Technology): TechnologyResponse {
+    private fun toTechnologyResponseSync(technology: Technology): TechnologyResponse {
         return TechnologyResponse(
             id = technology.id!!,
             name = technology.name,
