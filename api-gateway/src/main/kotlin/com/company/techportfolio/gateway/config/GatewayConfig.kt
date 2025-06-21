@@ -2,12 +2,14 @@ package com.company.techportfolio.gateway.config
 
 import org.springframework.cloud.gateway.route.RouteLocator
 import org.springframework.cloud.gateway.route.builder.RouteLocatorBuilder
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
 @Configuration
 @Profile("!mock-auth")  // Only load when NOT in mock-auth mode
+@ConditionalOnProperty(name = ["spring.cloud.gateway.enabled"], havingValue = "true", matchIfMissing = true)
 class GatewayConfig {
 
     /**

@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class RoleTest {
@@ -25,7 +25,7 @@ class RoleTest {
         val now = LocalDateTime.now()
         val permission1 = Permission(id = 1, name = "READ", resource = "portfolio", action = "read")
         val permission2 = Permission(id = 2, name = "WRITE", resource = "portfolio", action = "write")
-        
+
         val role = Role(
             id = 1L,
             name = "ADMIN",
@@ -48,7 +48,7 @@ class RoleTest {
     @Test
     fun `should support data class equality`() {
         val timestamp = LocalDateTime.of(2023, 1, 1, 12, 0, 0)
-        
+
         val role1 = Role(
             name = "USER",
             createdAt = timestamp
@@ -93,7 +93,7 @@ class RoleTest {
         val permission1 = Permission(id = 1, name = "READ", resource = "portfolio", action = "read")
         val permission2 = Permission(id = 2, name = "WRITE", resource = "portfolio", action = "write")
         val permission3 = Permission(id = 3, name = "DELETE", resource = "portfolio", action = "delete")
-        
+
         val role = Role(
             name = "PORTFOLIO_MANAGER",
             permissions = setOf(permission1, permission2, permission3)
@@ -173,7 +173,7 @@ class RoleTest {
         val portfolioRead = Permission(name = "PORTFOLIO_READ", resource = "portfolio", action = "read")
         val userWrite = Permission(name = "USER_WRITE", resource = "user", action = "write")
         val roleManage = Permission(name = "ROLE_MANAGE", resource = "role", action = "manage")
-        
+
         val role = Role(
             name = "MULTI_RESOURCE_ROLE",
             permissions = setOf(portfolioRead, userWrite, roleManage)
@@ -188,12 +188,12 @@ class RoleTest {
     fun `should handle role hierarchy concept`() {
         val basicPermission = Permission(name = "READ", resource = "portfolio", action = "read")
         val adminPermission = Permission(name = "MANAGE", resource = "portfolio", action = "manage")
-        
+
         val basicRole = Role(
             name = "BASIC_USER",
             permissions = setOf(basicPermission)
         )
-        
+
         val adminRole = Role(
             name = "ADMIN",
             permissions = setOf(basicPermission, adminPermission)

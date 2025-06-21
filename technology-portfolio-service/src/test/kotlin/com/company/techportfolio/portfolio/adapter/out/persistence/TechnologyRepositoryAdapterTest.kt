@@ -1,25 +1,32 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence
 
-import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
 import com.company.techportfolio.portfolio.adapter.out.persistence.entity.TechnologyEntity
-import com.company.techportfolio.shared.domain.model.*
-import io.mockk.*
+import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
+import com.company.techportfolio.shared.domain.model.MaturityLevel
+import com.company.techportfolio.shared.domain.model.RiskLevel
+import com.company.techportfolio.shared.domain.model.Technology
+import com.company.techportfolio.shared.domain.model.TechnologyType
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.*
 
 /**
  * Unit tests for TechnologyRepositoryAdapter.
- * 
+ *
  * This test class verifies the functionality of the TechnologyRepositoryAdapter, which
  * is the implementation of the TechnologyRepository and TechnologyQueryRepository interfaces
  * in the hexagonal architecture. It tests the adapter's ability to correctly translate
  * between domain models and JPA entities, and to delegate operations to the underlying
  * Spring Data JPA repository.
- * 
+ *
  * ## Test Coverage:
  * - Basic CRUD operations (find, save, update, delete)
  * - Query operations by various criteria (portfolio, category, type, vendor, etc.)
@@ -28,12 +35,12 @@ import java.util.*
  * - Domain model to entity mapping
  * - Entity to domain model mapping
  * - Entity to summary model mapping
- * 
+ *
  * ## Testing Approach:
  * - Uses MockK for mocking the JPA repository
  * - Follows the Given-When-Then pattern for test clarity
  * - Verifies both return values and repository interactions
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see TechnologyRepositoryAdapter
@@ -59,7 +66,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Set up the test environment before each test.
-     * 
+     *
      * Initializes a fresh instance of the TechnologyRepositoryAdapter with mock
      * dependencies for each test to ensure test isolation.
      */
@@ -71,7 +78,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findById returns a correctly mapped domain model when a technology exists.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entity is properly mapped to a domain model
@@ -82,10 +89,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val technologyId = 1L
         val entity = createTestTechnologyEntity(technologyId, "Spring Boot")
-        every { technologyJpaRepository.findById(technologyId) } returns Optional.of(entity)
+        every { technologyJpaRepository.findById(technologyId) } returns Mono.just(entity)
 
         // When
-        val result = technologyRepositoryAdapter.findById(technologyId)
+        val result = technologyRepositoryAdapter.findById(technologyId).block()
 
         // Then
         assertNotNull(result)
@@ -98,7 +105,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findById returns null when a technology does not exist.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The adapter returns null when the repository returns an empty Optional
@@ -107,10 +114,10 @@ class TechnologyRepositoryAdapterTest {
     fun `findById should return null when not found`() {
         // Given
         val technologyId = 999L
-        every { technologyJpaRepository.findById(technologyId) } returns Optional.empty()
+        every { technologyJpaRepository.findById(technologyId) } returns Mono.empty()
 
         // When
-        val result = technologyRepositoryAdapter.findById(technologyId)
+        val result = technologyRepositoryAdapter.findById(technologyId).block()
 
         // Then
         assertNull(result)
@@ -119,7 +126,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByName returns a correctly mapped domain model when a technology exists.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entity is properly mapped to a domain model
@@ -130,10 +137,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val name = "Spring Boot"
         val entity = createTestTechnologyEntity(1L, name)
-        every { technologyJpaRepository.findByName(name) } returns entity
+        every { technologyJpaRepository.findByName(name) } returns Mono.just(entity)
 
         // When
-        val result = technologyRepositoryAdapter.findByName(name)
+        val result = technologyRepositoryAdapter.findByName(name).block()
 
         // Then
         assertNotNull(result)
@@ -143,7 +150,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByName returns null when a technology does not exist.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The adapter returns null when the repository returns null
@@ -152,10 +159,10 @@ class TechnologyRepositoryAdapterTest {
     fun `findByName should return null when not found`() {
         // Given
         val name = "Non-existent Technology"
-        every { technologyJpaRepository.findByName(name) } returns null
+        every { technologyJpaRepository.findByName(name) } returns Mono.empty()
 
         // When
-        val result = technologyRepositoryAdapter.findByName(name)
+        val result = technologyRepositoryAdapter.findByName(name).block()
 
         // Then
         assertNull(result)
@@ -164,7 +171,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByPortfolioId returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -178,10 +185,10 @@ class TechnologyRepositoryAdapterTest {
             createTestTechnologyEntity(1L, "Spring Boot"),
             createTestTechnologyEntity(2L, "PostgreSQL")
         )
-        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns entities
+        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByPortfolioId(portfolioId)
+        val result = technologyRepositoryAdapter.findByPortfolioId(portfolioId).collectList().block()!!
 
         // Then
         assertEquals(2, result.size)
@@ -192,7 +199,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByCategory returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -203,10 +210,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val category = "Framework"
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByCategory(category) } returns entities
+        every { technologyJpaRepository.findByCategory(category) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByCategory(category)
+        val result = technologyRepositoryAdapter.findByCategory(category).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -216,7 +223,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByType returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -227,10 +234,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val type = TechnologyType.FRAMEWORK
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByType(type) } returns entities
+        every { technologyJpaRepository.findByType(type) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByType(type)
+        val result = technologyRepositoryAdapter.findByType(type).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -240,7 +247,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByVendor returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -251,10 +258,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val vendorName = "VMware"
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByVendorName(vendorName) } returns entities
+        every { technologyJpaRepository.findByVendorName(vendorName) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByVendor(vendorName)
+        val result = technologyRepositoryAdapter.findByVendor(vendorName).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -264,7 +271,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByMaturityLevel returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -275,10 +282,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val maturityLevel = MaturityLevel.MATURE
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByMaturityLevel(maturityLevel) } returns entities
+        every { technologyJpaRepository.findByMaturityLevel(maturityLevel) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByMaturityLevel(maturityLevel)
+        val result = technologyRepositoryAdapter.findByMaturityLevel(maturityLevel).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -288,7 +295,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that findByRiskLevel returns a list of correctly mapped domain models.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The returned entities are properly mapped to domain models
@@ -299,10 +306,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val riskLevel = RiskLevel.LOW
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByRiskLevel(riskLevel) } returns entities
+        every { technologyJpaRepository.findByRiskLevel(riskLevel) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findByRiskLevel(riskLevel)
+        val result = technologyRepositoryAdapter.findByRiskLevel(riskLevel).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -312,7 +319,7 @@ class TechnologyRepositoryAdapterTest {
 
     /**
      * Tests that save correctly persists a new technology.
-     * 
+     *
      * Verifies that:
      * 1. The adapter correctly delegates to the JPA repository
      * 2. The domain model is properly mapped to an entity before saving
@@ -324,10 +331,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val technology = createTestTechnology(null, "New Technology")
         val savedEntity = createTestTechnologyEntity(1L, "New Technology")
-        every { technologyJpaRepository.save(any()) } returns savedEntity
+        every { technologyJpaRepository.save(any()) } returns Mono.just(savedEntity)
 
         // When
-        val result = technologyRepositoryAdapter.save(technology)
+        val result = technologyRepositoryAdapter.save(technology).block()!!
 
         // Then
         assertNotNull(result)
@@ -341,10 +348,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val technology = createTestTechnology(1L, "Updated Technology")
         val updatedEntity = createTestTechnologyEntity(1L, "Updated Technology")
-        every { technologyJpaRepository.save(any()) } returns updatedEntity
+        every { technologyJpaRepository.save(any()) } returns Mono.just(updatedEntity)
 
         // When
-        val result = technologyRepositoryAdapter.update(technology)
+        val result = technologyRepositoryAdapter.update(technology).block()!!
 
         // Then
         assertNotNull(result)
@@ -357,13 +364,15 @@ class TechnologyRepositoryAdapterTest {
     fun `delete should delete technology successfully`() {
         // Given
         val technologyId = 1L
-        every { technologyJpaRepository.deleteById(technologyId) } just Runs
+        every { technologyJpaRepository.existsById(technologyId) } returns Mono.just(true)
+        every { technologyJpaRepository.deleteById(technologyId) } returns Mono.empty<Void>()
 
         // When
-        val result = technologyRepositoryAdapter.delete(technologyId)
+        val result = technologyRepositoryAdapter.delete(technologyId).block()!!
 
         // Then
         assertTrue(result)
+        verify { technologyJpaRepository.existsById(technologyId) }
         verify { technologyJpaRepository.deleteById(technologyId) }
     }
 
@@ -371,24 +380,24 @@ class TechnologyRepositoryAdapterTest {
     fun `delete should return false when deletion fails`() {
         // Given
         val technologyId = 1L
-        every { technologyJpaRepository.deleteById(technologyId) } throws RuntimeException("Delete failed")
+        every { technologyJpaRepository.existsById(technologyId) } returns Mono.just(false)
 
         // When
-        val result = technologyRepositoryAdapter.delete(technologyId)
+        val result = technologyRepositoryAdapter.delete(technologyId).block()!!
 
         // Then
         assertFalse(result)
-        verify { technologyJpaRepository.deleteById(technologyId) }
+        verify { technologyJpaRepository.existsById(technologyId) }
     }
 
     @Test
     fun `existsById should return true when technology exists`() {
         // Given
         val technologyId = 1L
-        every { technologyJpaRepository.existsById(technologyId) } returns true
+        every { technologyJpaRepository.existsById(technologyId) } returns Mono.just(true)
 
         // When
-        val result = technologyRepositoryAdapter.existsById(technologyId)
+        val result = technologyRepositoryAdapter.existsById(technologyId).block()!!
 
         // Then
         assertTrue(result)
@@ -399,10 +408,10 @@ class TechnologyRepositoryAdapterTest {
     fun `existsById should return false when technology does not exist`() {
         // Given
         val technologyId = 999L
-        every { technologyJpaRepository.existsById(technologyId) } returns false
+        every { technologyJpaRepository.existsById(technologyId) } returns Mono.just(false)
 
         // When
-        val result = technologyRepositoryAdapter.existsById(technologyId)
+        val result = technologyRepositoryAdapter.existsById(technologyId).block()!!
 
         // Then
         assertFalse(result)
@@ -414,10 +423,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val portfolioId = 1L
         val count = 5L
-        every { technologyJpaRepository.countByPortfolioId(portfolioId) } returns count
+        every { technologyJpaRepository.countByPortfolioId(portfolioId) } returns Mono.just(count)
 
         // When
-        val result = technologyRepositoryAdapter.countByPortfolioId(portfolioId)
+        val result = technologyRepositoryAdapter.countByPortfolioId(portfolioId).block()!!
 
         // Then
         assertEquals(count, result)
@@ -429,10 +438,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val technologyId = 1L
         val entity = createTestTechnologyEntity(technologyId, "Spring Boot")
-        every { technologyJpaRepository.findById(technologyId) } returns Optional.of(entity)
+        every { technologyJpaRepository.findById(technologyId) } returns Mono.just(entity)
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummary(technologyId)
+        val result = technologyRepositoryAdapter.findTechnologySummary(technologyId).block()
 
         // Then
         assertNotNull(result)
@@ -448,10 +457,10 @@ class TechnologyRepositoryAdapterTest {
     fun `findTechnologySummary should return null when technology not found`() {
         // Given
         val technologyId = 999L
-        every { technologyJpaRepository.findById(technologyId) } returns Optional.empty()
+        every { technologyJpaRepository.findById(technologyId) } returns Mono.empty()
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummary(technologyId)
+        val result = technologyRepositoryAdapter.findTechnologySummary(technologyId).block()
 
         // Then
         assertNull(result)
@@ -466,10 +475,10 @@ class TechnologyRepositoryAdapterTest {
             createTestTechnologyEntity(1L, "Spring Boot"),
             createTestTechnologyEntity(2L, "PostgreSQL")
         )
-        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns entities
+        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummariesByPortfolio(portfolioId)
+        val result = technologyRepositoryAdapter.findTechnologySummariesByPortfolio(portfolioId).collectList().block()!!
 
         // Then
         assertEquals(2, result.size)
@@ -484,10 +493,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val category = "Framework"
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByCategory(category) } returns entities
+        every { technologyJpaRepository.findByCategory(category) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummariesByCategory(category)
+        val result = technologyRepositoryAdapter.findTechnologySummariesByCategory(category).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -501,10 +510,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val type = TechnologyType.FRAMEWORK
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByType(type) } returns entities
+        every { technologyJpaRepository.findByType(type) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummariesByType(type)
+        val result = technologyRepositoryAdapter.findTechnologySummariesByType(type).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -518,10 +527,10 @@ class TechnologyRepositoryAdapterTest {
         // Given
         val vendorName = "VMware"
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        every { technologyJpaRepository.findByVendorName(vendorName) } returns entities
+        every { technologyJpaRepository.findByVendorName(vendorName) } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findTechnologySummariesByVendor(vendorName)
+        val result = technologyRepositoryAdapter.findTechnologySummariesByVendor(vendorName).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)
@@ -537,10 +546,10 @@ class TechnologyRepositoryAdapterTest {
             createTestTechnologyEntity(1L, "Spring Boot"),
             createTestTechnologyEntity(2L, "PostgreSQL")
         )
-        every { technologyJpaRepository.findByIsActiveTrue() } returns entities
+        every { technologyJpaRepository.findByIsActiveTrue() } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.findAllTechnologySummaries()
+        val result = technologyRepositoryAdapter.findAllTechnologySummaries().collectList().block()!!
 
         // Then
         assertEquals(2, result.size)
@@ -556,11 +565,19 @@ class TechnologyRepositoryAdapterTest {
         val type = TechnologyType.FRAMEWORK
         val vendorName = "VMware"
         val entities = listOf(createTestTechnologyEntity(1L, "Spring Boot"))
-        
-        every { technologyJpaRepository.searchTechnologies(name, category, type, vendorName) } returns entities
+
+        every {
+            technologyJpaRepository.searchTechnologies(
+                name,
+                category,
+                type,
+                vendorName
+            )
+        } returns Flux.fromIterable(entities)
 
         // When
-        val result = technologyRepositoryAdapter.searchTechnologies(name, category, type, vendorName)
+        val result =
+            technologyRepositoryAdapter.searchTechnologies(name, category, type, vendorName).collectList().block()!!
 
         // Then
         assertEquals(1, result.size)

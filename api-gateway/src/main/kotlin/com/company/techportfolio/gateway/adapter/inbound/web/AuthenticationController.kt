@@ -11,24 +11,24 @@ import reactor.core.publisher.Mono
 
 /**
  * REST controller for authentication and authorization operations in the API Gateway (REACTIVE).
- * 
+ *
  * This controller provides HTTP endpoints for user authentication, token validation,
- * token refresh, and authorization checks using reactive programming patterns. It serves 
- * as the inbound adapter in the hexagonal architecture, translating HTTP requests into 
+ * token refresh, and authorization checks using reactive programming patterns. It serves
+ * as the inbound adapter in the hexagonal architecture, translating HTTP requests into
  * domain service calls using reactive streams.
- * 
+ *
  * All methods return Mono<ResponseEntity<T>> for non-blocking I/O operations and include
  * reactive error handling with onErrorMap and onErrorResume.
- * 
+ *
  * Key endpoints:
  * - POST /api/auth/authenticate - User authentication
  * - POST /api/auth/validate - JWT token validation
  * - POST /api/auth/refresh - JWT token refresh
  * - POST /api/auth/authorize - User authorization checks
  * - GET /api/auth/health - Service health check
- * 
+ *
  * @property authenticationService Domain service for authentication operations
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -40,12 +40,12 @@ class AuthenticationController(
 
     /**
      * Authenticates a user and returns authentication result with JWT token.
-     * 
+     *
      * This endpoint processes authentication requests, typically from SAML SSO flows,
      * and returns a comprehensive authentication result including user details and JWT token.
-     * 
+     *
      * **Reactive**: Returns Mono<ResponseEntity<AuthenticationResult>>
-     * 
+     *
      * @param authentication Spring Security Authentication object containing user credentials
      * @return Mono<ResponseEntity<AuthenticationResult>> with AuthenticationResult (200 OK if successful, 400 Bad Request if failed)
      */
@@ -64,12 +64,12 @@ class AuthenticationController(
 
     /**
      * Validates a JWT token and returns validation result with user information.
-     * 
+     *
      * This endpoint accepts a Bearer token in the Authorization header and performs
      * comprehensive token validation including signature verification and expiration checking.
-     * 
+     *
      * **Reactive**: Returns Mono<ResponseEntity<TokenValidationResult>>
-     * 
+     *
      * @param authorization Authorization header containing "Bearer {token}"
      * @return Mono<ResponseEntity<TokenValidationResult>> with TokenValidationResult (200 OK if valid, 401 Unauthorized if invalid)
      */
@@ -89,19 +89,19 @@ class AuthenticationController(
 
     /**
      * Refreshes an existing JWT token and returns a new token with extended expiration.
-     * 
+     *
      * This endpoint accepts a Bearer token in the Authorization header and attempts to
      * refresh it if valid. Returns a new token with extended expiration time.
-     * 
+     *
      * **Reactive**: Returns Mono<ResponseEntity<Map<String, String>>>
-     * 
+     *
      * @param authorization Authorization header containing "Bearer {token}"
      * @return Mono<ResponseEntity<Map<String, String>>> with new token (200 OK if successful, 401 Unauthorized if failed)
      */
     @PostMapping("/refresh")
     fun refreshToken(@RequestHeader("Authorization") authorization: String): Mono<ResponseEntity<Map<String, String>>> {
         val token = authorization.removePrefix("Bearer ").trim()
-        return Mono.fromCallable<String?> { authenticationService.refreshToken(token) }
+        return Mono.fromCallable { authenticationService.refreshToken(token) }
             .map { refreshedToken ->
                 if (refreshedToken != null) {
                     ResponseEntity.ok(mapOf("token" to refreshedToken))
@@ -109,17 +109,18 @@ class AuthenticationController(
                     ResponseEntity.status(401).body(mapOf("error" to "Token refresh failed"))
                 }
             }
+            .switchIfEmpty(Mono.just(ResponseEntity.status(401).body(mapOf("error" to "Token refresh failed"))))
             .onErrorReturn(ResponseEntity.status(401).body(mapOf("error" to "Token refresh failed")))
     }
 
     /**
      * Authorizes a user to perform a specific action on a resource.
-     * 
+     *
      * This endpoint performs authorization checks to determine if a user has permission
      * to perform a specific action on a given resource based on their roles and permissions.
-     * 
+     *
      * **Reactive**: Returns Mono<ResponseEntity<AuthorizationResult>>
-     * 
+     *
      * @param username The username of the user requesting access
      * @param resource The resource being accessed (e.g., "portfolios", "users")
      * @param action The action being performed (e.g., "read", "write", "delete")
@@ -131,7 +132,13 @@ class AuthenticationController(
         @RequestParam resource: String,
         @RequestParam action: String
     ): Mono<ResponseEntity<AuthorizationResult>> {
-        return Mono.fromCallable<AuthorizationResult> { authenticationService.authorizeUser(username, resource, action) }
+        return Mono.fromCallable<AuthorizationResult> {
+            authenticationService.authorizeUser(
+                username,
+                resource,
+                action
+            )
+        }
             .map { result ->
                 if (result.isAuthorized) {
                     ResponseEntity.ok(result)
@@ -144,12 +151,12 @@ class AuthenticationController(
 
     /**
      * Health check endpoint for the authentication service.
-     * 
+     *
      * This endpoint provides a simple health check to verify that the authentication
      * service is running and responsive. Used by monitoring systems and load balancers.
-     * 
+     *
      * **Reactive**: Returns Mono<ResponseEntity<Map<String, String>>>
-     * 
+     *
      * @return Mono<ResponseEntity<Map<String, String>>> with health status (200 OK with status information)
      */
     @GetMapping("/health")

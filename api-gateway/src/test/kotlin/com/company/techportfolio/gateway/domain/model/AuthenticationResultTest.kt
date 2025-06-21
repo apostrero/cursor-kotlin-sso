@@ -1,16 +1,16 @@
 package com.company.techportfolio.gateway.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 /**
  * Unit test class for the AuthenticationResult domain model.
- * 
+ *
  * This test class verifies the behavior of the AuthenticationResult data class
  * which represents the outcome of authentication operations in the system.
  * It tests all factory methods, constructors, and data class functionality.
- * 
+ *
  * Test coverage includes:
  * - Success authentication result creation
  * - Failure authentication result creation
@@ -19,13 +19,13 @@ import java.time.LocalDateTime
  * - Data class equality, hashCode, and toString
  * - Copy functionality for immutable updates
  * - Edge cases with null values
- * 
+ *
  * Testing approach:
  * - Tests all companion object factory methods
  * - Validates data class properties and behavior
  * - Verifies immutability and functional programming patterns
  * - Tests edge cases and boundary conditions
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -33,10 +33,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests successful authentication result creation using factory method.
-     * 
+     *
      * Verifies that the success factory method creates an AuthenticationResult
      * with all required properties set correctly for successful authentication.
-     * 
+     *
      * Expected behavior:
      * - Sets isAuthenticated to true
      * - Populates all user-related properties
@@ -73,10 +73,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests failure authentication result creation using factory method.
-     * 
+     *
      * Verifies that the failure factory method creates an AuthenticationResult
      * with appropriate properties set for failed authentication scenarios.
-     * 
+     *
      * Expected behavior:
      * - Sets isAuthenticated to false
      * - Sets all user-related properties to null or empty
@@ -103,10 +103,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests not authenticated result creation using factory method.
-     * 
+     *
      * Verifies that the notAuthenticated factory method creates an AuthenticationResult
      * with neutral state indicating no authentication attempt was made.
-     * 
+     *
      * Expected behavior:
      * - Sets isAuthenticated to false
      * - Sets all properties to null or empty
@@ -130,10 +130,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests direct constructor usage with all parameters.
-     * 
+     *
      * Verifies that the primary constructor can be used directly to create
      * AuthenticationResult instances with custom parameter combinations.
-     * 
+     *
      * Expected behavior:
      * - Accepts all parameters directly
      * - Preserves all input values
@@ -173,10 +173,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests constructor with default parameter values.
-     * 
+     *
      * Verifies that the constructor properly handles default values
      * when only required parameters are provided.
-     * 
+     *
      * Expected behavior:
      * - Uses default values for optional parameters
      * - Creates valid instance with minimal input
@@ -199,10 +199,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests data class equality and hashCode implementation.
-     * 
+     *
      * Verifies that the data class properly implements equality comparison
      * and hashCode generation based on all properties.
-     * 
+     *
      * Expected behavior:
      * - Equal objects have same property values
      * - Equal objects have same hashCode
@@ -237,10 +237,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests toString implementation for debugging and logging.
-     * 
+     *
      * Verifies that the data class provides meaningful string representation
      * that includes key properties for debugging purposes.
-     * 
+     *
      * Expected behavior:
      * - Includes class name in string representation
      * - Shows key property values
@@ -268,10 +268,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests copy functionality for immutable updates.
-     * 
+     *
      * Verifies that the data class copy method allows creating modified
      * instances while preserving immutability principles.
-     * 
+     *
      * Expected behavior:
      * - Creates new instance with modified properties
      * - Preserves unchanged properties from original
@@ -303,10 +303,10 @@ class AuthenticationResultTest {
 
     /**
      * Tests handling of null session index in success scenarios.
-     * 
+     *
      * Verifies that the success factory method properly handles null
      * session index values, which may occur in certain authentication flows.
-     * 
+     *
      * Expected behavior:
      * - Accepts null session index without errors
      * - Creates valid successful authentication result

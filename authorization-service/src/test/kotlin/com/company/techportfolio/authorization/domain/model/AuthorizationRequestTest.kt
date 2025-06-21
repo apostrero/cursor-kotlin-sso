@@ -1,7 +1,7 @@
 package com.company.techportfolio.authorization.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 /**
  * Authorization Request Test Suite - Domain Model Unit Tests

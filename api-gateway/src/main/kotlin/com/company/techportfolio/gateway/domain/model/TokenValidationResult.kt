@@ -4,11 +4,11 @@ import java.time.LocalDateTime
 
 /**
  * Represents the result of JWT token validation in the API Gateway.
- * 
+ *
  * This data class encapsulates all information related to token validation,
  * including validity status, user details extracted from the token, expiration information,
  * and error details. It serves as the contract between JWT authentication adapters and services.
- * 
+ *
  * @property isValid Indicates whether the JWT token is valid and can be trusted
  * @property username The username extracted from the token, null if token is invalid
  * @property authorities List of authorities/roles extracted from the token
@@ -17,7 +17,7 @@ import java.time.LocalDateTime
  * @property expiresAt Timestamp when the token expires, null if token is invalid
  * @property isExpired Indicates whether the token has expired based on current time
  * @property errorMessage Descriptive error message when validation fails, null on success
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -34,9 +34,9 @@ data class TokenValidationResult(
     companion object {
         /**
          * Creates a valid token validation result with extracted user information.
-         * 
+         *
          * Automatically calculates expiration status based on current time and token expiration.
-         * 
+         *
          * @param username The username extracted from the token
          * @param authorities List of user authorities/roles from the token
          * @param sessionIndex Unique session identifier, may be null
@@ -62,9 +62,9 @@ data class TokenValidationResult(
 
         /**
          * Creates an invalid token validation result with an error message.
-         * 
+         *
          * Used when token parsing fails, signature is invalid, or other validation errors occur.
-         * 
+         *
          * @param errorMessage Descriptive message explaining the validation failure
          * @return TokenValidationResult indicating invalid token
          */
@@ -75,22 +75,23 @@ data class TokenValidationResult(
 
         /**
          * Creates a token validation result for an expired token.
-         * 
+         *
          * Used when the token is structurally valid but has exceeded its expiration time.
          * Includes user information that was extracted before expiration check.
-         * 
+         *
          * @param username The username extracted from the expired token
          * @param authorities List of user authorities/roles from the expired token
          * @param sessionIndex Unique session identifier, may be null
          * @return TokenValidationResult indicating expired token
          */
-        fun expired(username: String, authorities: List<String>, sessionIndex: String?): TokenValidationResult = TokenValidationResult(
-            isValid = false,
-            username = username,
-            authorities = authorities,
-            sessionIndex = sessionIndex,
-            isExpired = true,
-            errorMessage = "Token has expired"
-        )
+        fun expired(username: String, authorities: List<String>, sessionIndex: String?): TokenValidationResult =
+            TokenValidationResult(
+                isValid = false,
+                username = username,
+                authorities = authorities,
+                sessionIndex = sessionIndex,
+                isExpired = true,
+                errorMessage = "Token has expired"
+            )
     }
 } 

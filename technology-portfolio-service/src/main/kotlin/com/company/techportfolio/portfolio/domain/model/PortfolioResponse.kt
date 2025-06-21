@@ -1,17 +1,17 @@
 package com.company.techportfolio.portfolio.domain.model
 
-import com.company.techportfolio.shared.domain.model.PortfolioType
 import com.company.techportfolio.shared.domain.model.PortfolioStatus
+import com.company.techportfolio.shared.domain.model.PortfolioType
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
  * Response data class representing a complete technology portfolio.
- * 
+ *
  * This data class represents the full information about a technology portfolio
  * that is returned to clients. It includes all portfolio metadata, ownership
  * information, cost summaries, and associated technologies.
- * 
+ *
  * @property id Unique identifier of the portfolio
  * @property name Name of the portfolio
  * @property description Optional description of the portfolio
@@ -25,7 +25,7 @@ import java.time.LocalDateTime
  * @property technologyCount Number of technologies in this portfolio
  * @property totalAnnualCost Optional total annual cost of all technologies
  * @property technologies List of technologies in this portfolio
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

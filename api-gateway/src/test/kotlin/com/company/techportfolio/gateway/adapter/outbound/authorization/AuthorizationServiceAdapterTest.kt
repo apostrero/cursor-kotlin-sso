@@ -3,36 +3,36 @@ package com.company.techportfolio.gateway.adapter.outbound.authorization
 import com.company.techportfolio.gateway.adapter.out.authorization.AuthorizationServiceAdapter
 import com.company.techportfolio.gateway.domain.port.AuthorizationResult
 import io.mockk.*
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.web.client.RestClientException
 import org.springframework.web.client.RestTemplate
 
 /**
  * Unit test class for the AuthorizationServiceAdapter.
- * 
+ *
  * This test class verifies the behavior of the AuthorizationServiceAdapter which handles
- * communication with the external authorization microservice via REST API calls.
- * It tests role-based access control (RBAC) operations and permission management.
- * 
+ * communication with the external authorization microservice via HTTP REST API calls.
+ * It tests all aspects of authorization service integration including user authorization,
+ * permission retrieval, role checking, and error handling.
+ *
  * Test coverage includes:
- * - User authorization checks via REST API
- * - Permission retrieval and validation
- * - Role-based access control operations
- * - Error handling when authorization service is unavailable
- * - REST API communication patterns and error responses
- * - Fallback behavior for service failures
- * 
+ * - User authorization checks with various parameter combinations
+ * - Permission retrieval for users
+ * - Role membership verification (single and multiple roles)
+ * - Error handling for service unavailability and network issues
+ * - Null response handling and edge cases
+ * - RestTemplate interaction verification
+ *
  * Testing approach:
  * - Uses MockK for mocking RestTemplate dependencies
- * - Tests successful authorization scenarios
- * - Verifies error handling and graceful degradation
- * - Validates REST API call parameters and URLs
- * - Ensures authorization failures return appropriate responses
- * - Tests various user permission scenarios
- * 
+ * - Tests all authorization service endpoints
+ * - Verifies HTTP request parameters and response handling
+ * - Validates error handling and fallback behaviors
+ * - Follows Given-When-Then test structure
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -169,15 +169,15 @@ class AuthorizationServiceAdapterTest {
         // Given
         val username = "testuser"
         val expectedUrl = "$authorizationServiceUrl/api/authorization/permissions?username=$username"
-        val expectedPermissions = listOf("READ_PORTFOLIO", "WRITE_PORTFOLIO")
+        val expectedPermissions = arrayOf("READ_PORTFOLIO", "WRITE_PORTFOLIO")
 
-        every { restTemplate.getForObject(expectedUrl, Array<String>::class.java) } returns expectedPermissions.toTypedArray()
+        every { restTemplate.getForObject(expectedUrl, Array<String>::class.java) } returns expectedPermissions
 
         // When
         val permissions = authorizationServiceAdapter.getUserPermissions(username)
 
         // Then
-        assertEquals(expectedPermissions, permissions)
+        assertEquals(expectedPermissions.toList(), permissions)
 
         verify(exactly = 1) { restTemplate.getForObject(expectedUrl, Array<String>::class.java) }
     }

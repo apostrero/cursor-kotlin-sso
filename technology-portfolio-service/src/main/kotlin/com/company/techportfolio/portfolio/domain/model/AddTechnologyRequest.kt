@@ -1,18 +1,18 @@
 package com.company.techportfolio.portfolio.domain.model
 
-import com.company.techportfolio.shared.domain.model.TechnologyType
 import com.company.techportfolio.shared.domain.model.MaturityLevel
 import com.company.techportfolio.shared.domain.model.RiskLevel
+import com.company.techportfolio.shared.domain.model.TechnologyType
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
  * Request data class for adding a new technology to a portfolio.
- * 
+ *
  * This data class represents the comprehensive information required to add
  * a new technology to an existing portfolio. It includes technical details,
  * cost information, vendor details, and risk assessment data.
- * 
+ *
  * @property name The name of the technology (required)
  * @property description Optional description of the technology
  * @property category The category this technology belongs to (required)
@@ -26,7 +26,7 @@ import java.time.LocalDateTime
  * @property vendorName Optional vendor/supplier name
  * @property vendorContact Optional vendor contact information
  * @property supportContractExpiry Optional support contract expiration date
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

@@ -1,17 +1,17 @@
 package com.company.techportfolio.portfolio.domain.port
 
-import com.company.techportfolio.shared.model.TechnologyPortfolio
-import com.company.techportfolio.shared.model.PortfolioType
 import com.company.techportfolio.shared.model.PortfolioStatus
+import com.company.techportfolio.shared.model.PortfolioType
+import com.company.techportfolio.shared.model.TechnologyPortfolio
 
 /**
  * Repository interface for technology portfolio persistence operations.
- * 
+ *
  * This interface defines the contract for data access operations related to
  * technology portfolios within the portfolio service. It follows the hexagonal
  * architecture pattern by defining domain requirements without depending on
  * specific implementations.
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

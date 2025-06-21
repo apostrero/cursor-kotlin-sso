@@ -1,3 +1,5 @@
+import java.time.Duration
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.spring")
@@ -26,6 +28,19 @@ tasks.withType<Test> {
     useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
     ignoreFailures = true
+    
+    // Configure test timeouts to prevent hanging
+    systemProperty("junit.jupiter.execution.timeout.default", "10m")
+    systemProperty("junit.jupiter.execution.timeout.testable.method.default", "5m")
+    
+    // Exclude load tests by default (they're @Disabled anyway)
+    // To run load tests: ./gradlew test -Drun.load.tests=true
+    if (System.getProperty("run.load.tests") != "true") {
+        exclude("**/ReactiveLoadTest*")
+    }
+    
+    // Set reasonable timeouts for all tests
+    timeout.set(Duration.ofMinutes(10))
 }
 
 tasks.jacocoTestReport {
@@ -49,6 +64,10 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("io.micrometer:micrometer-registry-prometheus")
     
+    // Micrometer binders for monitoring
+    // implementation("io.micrometer:micrometer-binder-reactor:1.11.5")
+    // implementation("io.micrometer:micrometer-binder-r2dbc:1.11.5")
+    
     // Spring Boot Starters - MIGRATED TO WEBFLUX
     implementation("org.springframework.boot:spring-boot-starter-webflux")
     implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
@@ -57,6 +76,10 @@ dependencies {
     // OAuth2 and JWT
     implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
     implementation("org.springframework.security:spring-security-oauth2-jose")
+    
+    // OpenAPI/Swagger Documentation
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.3.0")
+    implementation("org.springdoc:springdoc-openapi-starter-common:2.3.0")
     
     // Database - MIGRATED TO R2DBC
     implementation("org.postgresql:r2dbc-postgresql:1.0.4.RELEASE")
@@ -77,6 +100,7 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
     testImplementation("org.testcontainers:postgresql:1.19.3")
     testImplementation("org.testcontainers:junit-jupiter:1.19.3")
+    testImplementation("org.testcontainers:r2dbc:1.19.3")
     testImplementation("io.mockk:mockk:1.13.8")
     testImplementation("io.r2dbc:r2dbc-h2")
     testImplementation("org.mockito.kotlin:mockito-kotlin:5.2.1")

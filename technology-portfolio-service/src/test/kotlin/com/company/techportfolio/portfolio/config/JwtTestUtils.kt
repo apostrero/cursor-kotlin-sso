@@ -13,24 +13,24 @@ import java.util.*
 
 /**
  * JWT Test Utilities for Technology Portfolio Service
- * 
+ *
  * This utility class provides helper methods for generating and validating
  * JWT tokens during testing. It supports creating test tokens with custom
  * claims, authorities, and expiration times for security testing scenarios.
- * 
+ *
  * Key features:
  * - JWT token generation with custom claims
  * - Authority/role injection for testing
  * - Configurable expiration times
  * - Test-specific JWT decoder
  * - Support for different signing algorithms
- * 
+ *
  * Usage:
  * - Generate tokens for authenticated test scenarios
  * - Test different authority combinations
  * - Validate JWT authentication flow
  * - Test token expiration scenarios
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -41,11 +41,11 @@ object JwtTestUtils {
 
     /**
      * Generates a JWT token for testing purposes.
-     * 
+     *
      * Creates a signed JWT token with the specified username, authorities,
      * and optional expiration time. The token uses HMAC-SHA512 signing
      * for consistency with the production configuration.
-     * 
+     *
      * @param username The username to include in the token subject
      * @param authorities List of authorities/roles for the user
      * @param expirationMinutes Minutes until token expiration (default: 60)
@@ -71,10 +71,10 @@ object JwtTestUtils {
 
     /**
      * Generates an expired JWT token for testing expiration scenarios.
-     * 
+     *
      * Creates a JWT token that is already expired, useful for testing
      * token validation and expiration handling.
-     * 
+     *
      * @param username The username to include in the token subject
      * @param authorities List of authorities/roles for the user
      * @return Generated expired JWT token string
@@ -98,10 +98,10 @@ object JwtTestUtils {
 
     /**
      * Generates a JWT token with ADMIN role for testing admin scenarios.
-     * 
+     *
      * Creates a JWT token with ADMIN role, useful for testing endpoints
      * that require administrative privileges.
-     * 
+     *
      * @param username The username to include in the token subject
      * @return Generated JWT token string with ADMIN role
      */
@@ -111,10 +111,10 @@ object JwtTestUtils {
 
     /**
      * Generates a JWT token with multiple roles for testing complex scenarios.
-     * 
+     *
      * Creates a JWT token with multiple authorities, useful for testing
      * endpoints with complex authorization requirements.
-     * 
+     *
      * @param username The username to include in the token subject
      * @param roles List of roles to include in the token
      * @return Generated JWT token string with multiple roles
@@ -125,22 +125,22 @@ object JwtTestUtils {
 
     /**
      * Creates a JWT decoder for testing purposes.
-     * 
+     *
      * Returns a JWT decoder configured with the test signing key,
      * useful for validating tokens in test scenarios.
-     * 
+     *
      * @return JwtDecoder configured for test environment
      */
     fun createTestJwtDecoder(): JwtDecoder {
-        return NimbusJwtDecoder.withSecretKey(signingKey).build()
+        return NimbusJwtDecoder.withSecretKey(signingKey as javax.crypto.SecretKey).build()
     }
 
     /**
      * Validates a JWT token and returns the decoded JWT object.
-     * 
+     *
      * Decodes and validates a JWT token using the test signing key,
      * returning the JWT object if valid or throwing an exception if invalid.
-     * 
+     *
      * @param token JWT token string to validate
      * @return Decoded JWT object
      * @throws Exception if token is invalid or expired
@@ -152,10 +152,10 @@ object JwtTestUtils {
 
     /**
      * Extracts username from a JWT token without full validation.
-     * 
+     *
      * Performs basic token parsing to extract the username claim.
      * This is useful for logging and testing purposes.
-     * 
+     *
      * @param token JWT token string
      * @return Username extracted from token, or null if extraction fails
      */
@@ -174,10 +174,10 @@ object JwtTestUtils {
 
     /**
      * Extracts authorities from a JWT token without full validation.
-     * 
+     *
      * Performs basic token parsing to extract the authorities claim.
      * This is useful for testing authorization scenarios.
-     * 
+     *
      * @param token JWT token string
      * @return List of authorities extracted from token, or null if extraction fails
      */
@@ -197,10 +197,10 @@ object JwtTestUtils {
 
     /**
      * Checks if a JWT token has expired.
-     * 
+     *
      * Compares the token's expiration time with the current system time.
      * This is a lightweight check that doesn't perform full token validation.
-     * 
+     *
      * @param token JWT token string to check
      * @return true if token is expired, false otherwise
      */
@@ -220,10 +220,10 @@ object JwtTestUtils {
 
     /**
      * Creates an Authorization header value with a JWT token.
-     * 
+     *
      * Formats a JWT token as a proper Authorization header value
      * for use in HTTP requests during testing.
-     * 
+     *
      * @param token JWT token string
      * @return Authorization header value (e.g., "Bearer <token>")
      */

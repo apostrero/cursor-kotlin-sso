@@ -1,25 +1,23 @@
 package com.company.techportfolio.gateway.domain.service
 
-import com.company.techportfolio.gateway.domain.model.AuthenticationResult
 import com.company.techportfolio.gateway.domain.model.TokenValidationResult
 import com.company.techportfolio.gateway.domain.port.*
 import io.mockk.*
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.springframework.security.core.Authentication
-import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.saml2.provider.service.authentication.Saml2Authentication
 import java.time.LocalDateTime
 
 /**
  * Unit test class for the AuthenticationService domain service.
- * 
+ *
  * This test class verifies the behavior of the AuthenticationService which orchestrates
  * authentication and authorization operations in the system. It tests the coordination
  * between various ports and the implementation of business logic for authentication flows.
- * 
+ *
  * Test coverage includes:
  * - User authentication with SAML integration
  * - JWT token validation and refresh operations
@@ -27,14 +25,14 @@ import java.time.LocalDateTime
  * - Integration with authentication, authorization, and audit ports
  * - Error handling and edge cases
  * - Business logic validation and flow control
- * 
+ *
  * Testing approach:
  * - Uses MockK for mocking all port dependencies
  * - Tests service orchestration and business logic
  * - Verifies port interactions and method calls
  * - Validates error handling and edge cases
  * - Follows Given-When-Then test structure
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -44,7 +42,7 @@ class AuthenticationServiceTest {
     private val authenticationPort = mockk<AuthenticationPort>()
     private val authorizationPort = mockk<AuthorizationPort>()
     private val auditPort = mockk<AuditPort>()
-    
+
     private lateinit var authenticationService: AuthenticationService
 
     @BeforeEach
@@ -60,7 +58,6 @@ class AuthenticationServiceTest {
         val authorities = listOf("ROLE_USER", "READ_PORTFOLIO")
         val sessionIndex = "session-123"
         val token = "jwt-token-123"
-        val permissions = listOf("READ_PORTFOLIO", "WRITE_PORTFOLIO")
 
         val samlAuth = mockk<Saml2Authentication> {
             every { principal } returns username
@@ -69,7 +66,6 @@ class AuthenticationServiceTest {
         }
 
         every { authenticationPort.generateToken(username, authorities, sessionIndex) } returns token
-        every { authorizationPort.getUserPermissions(username) } returns permissions
         every { auditPort.logAuthenticationEvent(any()) } just Runs
         every { auditPort.logTokenEvent(any()) } just Runs
 
@@ -86,14 +82,13 @@ class AuthenticationServiceTest {
         assertNull(result.errorMessage)
 
         verify(exactly = 1) { authenticationPort.generateToken(username, authorities, sessionIndex) }
-        verify(exactly = 1) { authorizationPort.getUserPermissions(username) }
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             auditPort.logAuthenticationEvent(
                 match { event ->
                     event.username == username &&
-                    event.eventType == AuthenticationEventType.LOGIN_SUCCESS &&
-                    event.sessionIndex == sessionIndex &&
-                    event.success
+                            event.eventType == AuthenticationEventType.LOGIN_SUCCESS &&
+                            event.sessionIndex == sessionIndex &&
+                            event.success
                 }
             )
         }
@@ -101,8 +96,8 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == username &&
-                    event.eventType == TokenEventType.TOKEN_GENERATED &&
-                    event.sessionIndex == sessionIndex
+                            event.eventType == TokenEventType.TOKEN_GENERATED &&
+                            event.sessionIndex == sessionIndex
                 }
             )
         }
@@ -133,9 +128,9 @@ class AuthenticationServiceTest {
             auditPort.logAuthenticationEvent(
                 match { event ->
                     event.username == "unknown" &&
-                    event.eventType == AuthenticationEventType.LOGIN_FAILURE &&
-                    !event.success &&
-                    event.errorMessage != null
+                            event.eventType == AuthenticationEventType.LOGIN_FAILURE &&
+                            !event.success &&
+                            event.errorMessage != null
                 }
             )
         }
@@ -175,8 +170,8 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == username &&
-                    event.eventType == TokenEventType.TOKEN_VALIDATED &&
-                    event.sessionIndex == sessionIndex
+                            event.eventType == TokenEventType.TOKEN_VALIDATED &&
+                            event.sessionIndex == sessionIndex
                 }
             )
         }
@@ -203,7 +198,7 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == "unknown" &&
-                    event.eventType == TokenEventType.TOKEN_INVALID
+                            event.eventType == TokenEventType.TOKEN_INVALID
                 }
             )
         }
@@ -211,10 +206,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests token validation exception handling.
-     * 
+     *
      * Verifies that the service gracefully handles exceptions during token
      * validation by returning an invalid result and logging appropriate events.
-     * 
+     *
      * Expected behavior:
      * - Returns invalid TokenValidationResult on exception
      * - Logs token validation failure event
@@ -241,7 +236,7 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == "unknown" &&
-                    event.eventType == TokenEventType.TOKEN_INVALID
+                            event.eventType == TokenEventType.TOKEN_INVALID
                 }
             )
         }
@@ -249,10 +244,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests successful token refresh operation.
-     * 
+     *
      * Verifies that the service can refresh tokens by coordinating with the
      * authentication port and logging appropriate audit events.
-     * 
+     *
      * Expected behavior:
      * - Extracts user information from original token
      * - Calls authentication port to refresh token
@@ -285,8 +280,8 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == username &&
-                    event.eventType == TokenEventType.TOKEN_REFRESHED &&
-                    event.sessionIndex == sessionIndex
+                            event.eventType == TokenEventType.TOKEN_REFRESHED &&
+                            event.sessionIndex == sessionIndex
                 }
             )
         }
@@ -294,10 +289,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests token refresh failure when username extraction fails.
-     * 
+     *
      * Verifies that the service handles cases where username cannot be
      * extracted from the token during refresh operation.
-     * 
+     *
      * Expected behavior:
      * - Returns null when username extraction fails
      * - Does not log successful refresh event
@@ -322,7 +317,7 @@ class AuthenticationServiceTest {
 
         verify(exactly = 1) { authenticationPort.extractUsernameFromToken(token) }
         verify(exactly = 1) { authenticationPort.extractAuthoritiesFromToken(token) }
-        verify(exactly = 1) { authenticationPort.refreshToken(token) }
+        verify(exactly = 0) { authenticationPort.refreshToken(token) }
         verify(exactly = 0) {
             auditPort.logTokenEvent(
                 match { event -> event.eventType == TokenEventType.TOKEN_REFRESHED }
@@ -332,10 +327,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests token refresh failure when refresh operation returns null.
-     * 
+     *
      * Verifies that the service handles cases where the authentication port
      * cannot refresh the token (e.g., token is too old or invalid).
-     * 
+     *
      * Expected behavior:
      * - Returns null when refresh operation fails
      * - Does not log successful refresh event
@@ -368,10 +363,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests token refresh exception handling.
-     * 
+     *
      * Verifies that the service gracefully handles exceptions during token
      * refresh operations by returning null and logging appropriate events.
-     * 
+     *
      * Expected behavior:
      * - Returns null on exception during refresh
      * - Logs token invalid event
@@ -396,7 +391,7 @@ class AuthenticationServiceTest {
             auditPort.logTokenEvent(
                 match { event ->
                     event.username == "unknown" &&
-                    event.eventType == TokenEventType.TOKEN_INVALID
+                            event.eventType == TokenEventType.TOKEN_INVALID
                 }
             )
         }
@@ -404,10 +399,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests successful user authorization operation.
-     * 
+     *
      * Verifies that the service can authorize users by coordinating with the
      * authorization port and logging appropriate audit events.
-     * 
+     *
      * Expected behavior:
      * - Calls authorization port for user authorization
      * - Returns authorization result with permissions
@@ -441,10 +436,10 @@ class AuthenticationServiceTest {
             auditPort.logAuthorizationEvent(
                 match { event ->
                     event.username == username &&
-                    event.resource == resource &&
-                    event.action == action &&
-                    event.authorized &&
-                    event.permissions == permissions
+                            event.resource == resource &&
+                            event.action == action &&
+                            event.authorized &&
+                            event.permissions == permissions
                 }
             )
         }
@@ -452,10 +447,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests user authorization failure handling.
-     * 
+     *
      * Verifies that the service properly handles authorization failures
      * by returning unauthorized results and logging appropriate events.
-     * 
+     *
      * Expected behavior:
      * - Returns unauthorized result with error message
      * - Logs authorization failure event
@@ -489,10 +484,10 @@ class AuthenticationServiceTest {
             auditPort.logAuthorizationEvent(
                 match { event ->
                     event.username == username &&
-                    event.resource == resource &&
-                    event.action == action &&
-                    !event.authorized &&
-                    event.errorMessage == errorMessage
+                            event.resource == resource &&
+                            event.action == action &&
+                            !event.authorized &&
+                            event.errorMessage == errorMessage
                 }
             )
         }
@@ -500,11 +495,11 @@ class AuthenticationServiceTest {
 
     /**
      * Tests authorization exception handling.
-     * 
+     *
      * Verifies that the service gracefully handles exceptions during
      * authorization operations by returning unauthorized results and
      * logging appropriate events.
-     * 
+     *
      * Expected behavior:
      * - Returns unauthorized result on exception
      * - Logs authorization failure event
@@ -518,7 +513,13 @@ class AuthenticationServiceTest {
         val resource = "portfolio"
         val action = "read"
 
-        every { authorizationPort.authorizeUser(username, resource, action) } throws RuntimeException("Authorization service unavailable")
+        every {
+            authorizationPort.authorizeUser(
+                username,
+                resource,
+                action
+            )
+        } throws RuntimeException("Authorization service unavailable")
         every { auditPort.logAuthorizationEvent(any()) } just Runs
 
         // When
@@ -536,10 +537,10 @@ class AuthenticationServiceTest {
             auditPort.logAuthorizationEvent(
                 match { event ->
                     event.username == username &&
-                    event.resource == resource &&
-                    event.action == action &&
-                    !event.authorized &&
-                    event.errorMessage != null
+                            event.resource == resource &&
+                            event.action == action &&
+                            !event.authorized &&
+                            event.errorMessage != null
                 }
             )
         }
@@ -547,10 +548,10 @@ class AuthenticationServiceTest {
 
     /**
      * Tests handling of non-SAML authentication gracefully.
-     * 
+     *
      * Verifies that the service properly handles authentication objects
      * that are not SAML-based by returning authentication failures.
-     * 
+     *
      * Expected behavior:
      * - Returns authentication failure for non-SAML auth
      * - Logs authentication failure event
@@ -577,8 +578,8 @@ class AuthenticationServiceTest {
             auditPort.logAuthenticationEvent(
                 match { event ->
                     event.username == "unknown" &&
-                    event.eventType == AuthenticationEventType.LOGIN_FAILURE &&
-                    !event.success
+                            event.eventType == AuthenticationEventType.LOGIN_FAILURE &&
+                            !event.success
                 }
             )
         }

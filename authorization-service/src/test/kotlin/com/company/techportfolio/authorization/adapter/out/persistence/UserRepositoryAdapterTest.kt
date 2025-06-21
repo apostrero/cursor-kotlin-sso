@@ -1,18 +1,19 @@
 package com.company.techportfolio.authorization.adapter.out.persistence
 
-import com.company.techportfolio.authorization.adapter.out.persistence.entity.UserEntity
-import com.company.techportfolio.authorization.adapter.out.persistence.entity.RoleEntity
 import com.company.techportfolio.authorization.adapter.out.persistence.entity.PermissionEntity
-import com.company.techportfolio.authorization.adapter.out.persistence.repository.UserJpaRepository
-import com.company.techportfolio.authorization.adapter.out.persistence.repository.RoleJpaRepository
+import com.company.techportfolio.authorization.adapter.out.persistence.entity.RoleEntity
+import com.company.techportfolio.authorization.adapter.out.persistence.entity.UserEntity
 import com.company.techportfolio.authorization.adapter.out.persistence.repository.PermissionJpaRepository
-import com.company.techportfolio.shared.domain.model.User
-import io.mockk.*
+import com.company.techportfolio.authorization.adapter.out.persistence.repository.RoleJpaRepository
+import com.company.techportfolio.authorization.adapter.out.persistence.repository.UserJpaRepository
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import java.time.LocalDateTime
-import java.util.*
 
 /**
  * User Repository Adapter Test Suite - Persistence Layer Unit Tests
@@ -54,7 +55,7 @@ class UserRepositoryAdapterTest {
     private val userJpaRepository = mockk<UserJpaRepository>()
     private val roleJpaRepository = mockk<RoleJpaRepository>()
     private val permissionJpaRepository = mockk<PermissionJpaRepository>()
-    
+
     private lateinit var userRepositoryAdapter: UserRepositoryAdapter
 
     @BeforeEach
@@ -72,7 +73,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "testuser"
         val userEntity = createUserEntity(username = username)
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -94,7 +95,7 @@ class UserRepositoryAdapterTest {
     fun `should return null when user not found by id`() {
         // Given
         val username = "nonexistent"
-        
+
         every { userJpaRepository.findByUsername(username) } returns null
 
         // When
@@ -111,7 +112,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "testuser"
         val userEntity = createUserEntity(username = username)
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -128,7 +129,7 @@ class UserRepositoryAdapterTest {
     fun `should return null when user not found by username`() {
         // Given
         val username = "nonexistent"
-        
+
         every { userJpaRepository.findByUsername(username) } returns null
 
         // When
@@ -145,7 +146,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "testuser"
         val userEntity = createUserEntityWithRoles(username = username)
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -169,7 +170,7 @@ class UserRepositoryAdapterTest {
             createPermissionEntity(name = "portfolio:read", resource = "portfolio", action = "read"),
             createPermissionEntity(name = "portfolio:write", resource = "portfolio", action = "write")
         )
-        
+
         every { permissionJpaRepository.findPermissionsByUsername(username) } returns permissions
 
         // When
@@ -187,7 +188,7 @@ class UserRepositoryAdapterTest {
     fun `should return empty list when user has no permissions`() {
         // Given
         val username = "testuser"
-        
+
         every { permissionJpaRepository.findPermissionsByUsername(username) } returns emptyList()
 
         // When
@@ -207,7 +208,7 @@ class UserRepositoryAdapterTest {
             createRoleEntity(name = "USER"),
             createRoleEntity(name = "ADMIN")
         )
-        
+
         every { roleJpaRepository.findRolesByUsername(username) } returns roles
 
         // When
@@ -225,7 +226,7 @@ class UserRepositoryAdapterTest {
     fun `should return empty list when user has no roles`() {
         // Given
         val username = "testuser"
-        
+
         every { roleJpaRepository.findRolesByUsername(username) } returns emptyList()
 
         // When
@@ -241,7 +242,7 @@ class UserRepositoryAdapterTest {
     fun `should check if user is active successfully`() {
         // Given
         val username = "testuser"
-        
+
         every { userJpaRepository.isUserActive(username) } returns true
 
         // When
@@ -257,7 +258,7 @@ class UserRepositoryAdapterTest {
     fun `should return false when user is not active`() {
         // Given
         val username = "inactiveuser"
-        
+
         every { userJpaRepository.isUserActive(username) } returns false
 
         // When
@@ -273,7 +274,7 @@ class UserRepositoryAdapterTest {
     fun `should return false when user active status is null`() {
         // Given
         val username = "testuser"
-        
+
         every { userJpaRepository.isUserActive(username) } returns null
 
         // When
@@ -290,7 +291,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "testuser"
         val organizationId = 1L
-        
+
         every { userJpaRepository.findOrganizationIdByUsername(username) } returns organizationId
 
         // When
@@ -306,7 +307,7 @@ class UserRepositoryAdapterTest {
     fun `should return null when user has no organization`() {
         // Given
         val username = "testuser"
-        
+
         every { userJpaRepository.findOrganizationIdByUsername(username) } returns null
 
         // When
@@ -322,7 +323,7 @@ class UserRepositoryAdapterTest {
     fun `should handle empty username`() {
         // Given
         val username = ""
-        
+
         every { userJpaRepository.findByUsername(username) } returns null
 
         // When
@@ -339,7 +340,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "test.user@example.com"
         val userEntity = createUserEntity(username = username)
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -357,7 +358,7 @@ class UserRepositoryAdapterTest {
         // Given
         val username = "tëstüser"
         val userEntity = createUserEntity(username = username)
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -388,7 +389,7 @@ class UserRepositoryAdapterTest {
             organizationId = null,
             roles = emptySet()
         )
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -424,7 +425,7 @@ class UserRepositoryAdapterTest {
             organizationId = 5L,
             roles = setOf(createRoleEntity(name = "USER"))
         )
-        
+
         every { userJpaRepository.findByUsername(username) } returns userEntity
 
         // When
@@ -478,7 +479,7 @@ class UserRepositoryAdapterTest {
             createRoleEntity(name = "USER"),
             createRoleEntity(name = "ADMIN")
         )
-        
+
         return UserEntity(
             id = id,
             username = username,

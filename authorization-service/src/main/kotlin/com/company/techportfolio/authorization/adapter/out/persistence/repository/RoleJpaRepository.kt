@@ -35,7 +35,7 @@ import org.springframework.stereotype.Repository
  */
 @Repository
 interface RoleJpaRepository : JpaRepository<RoleEntity, Long> {
-    
+
     /**
      * Finds a role by its name.
      *
@@ -43,7 +43,7 @@ interface RoleJpaRepository : JpaRepository<RoleEntity, Long> {
      * @return The role entity if found, null otherwise
      */
     fun findByName(name: String): RoleEntity?
-    
+
     /**
      * Finds an active role by its name.
      *
@@ -54,7 +54,7 @@ interface RoleJpaRepository : JpaRepository<RoleEntity, Long> {
      * @return The active role entity if found, null otherwise
      */
     fun findByNameAndIsActiveTrue(name: String): RoleEntity?
-    
+
     /**
      * Finds all active roles assigned to a specific user.
      *

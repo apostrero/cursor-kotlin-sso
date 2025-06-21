@@ -1,9 +1,9 @@
 package com.company.techportfolio.authorization.adapter.out.persistence
 
-import com.company.techportfolio.authorization.domain.port.RoleRepository
-import com.company.techportfolio.shared.domain.model.Role
-import com.company.techportfolio.shared.domain.model.Permission
 import com.company.techportfolio.authorization.adapter.out.persistence.repository.RoleJpaRepository
+import com.company.techportfolio.authorization.domain.port.RoleRepository
+import com.company.techportfolio.shared.domain.model.Permission
+import com.company.techportfolio.shared.domain.model.Role
 import org.springframework.stereotype.Component
 
 /**

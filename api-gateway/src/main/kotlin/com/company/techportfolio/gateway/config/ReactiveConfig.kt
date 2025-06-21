@@ -9,7 +9,7 @@ import org.springframework.web.reactive.function.client.WebClient
 @Configuration
 @EnableWebFlux
 class ReactiveConfig : WebFluxConfigurer {
-    
+
     @Bean
     fun webClient(): WebClient {
         return WebClient.builder()

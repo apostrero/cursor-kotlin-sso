@@ -1,18 +1,18 @@
 package com.company.techportfolio.portfolio.domain.model
 
-import com.company.techportfolio.shared.domain.model.TechnologyType
 import com.company.techportfolio.shared.domain.model.MaturityLevel
 import com.company.techportfolio.shared.domain.model.RiskLevel
+import com.company.techportfolio.shared.domain.model.TechnologyType
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
  * Response data class representing a complete technology within a portfolio.
- * 
+ *
  * This data class represents the full information about a technology that is
  * returned to clients. It includes all technical details, cost information,
  * vendor details, risk assessments, and metadata.
- * 
+ *
  * @property id Unique identifier of the technology
  * @property name Name of the technology
  * @property description Optional description of the technology
@@ -30,7 +30,7 @@ import java.time.LocalDateTime
  * @property isActive Whether the technology is currently active
  * @property createdAt Timestamp when the technology was created
  * @property updatedAt Timestamp when the technology was last updated
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

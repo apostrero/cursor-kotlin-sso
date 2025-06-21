@@ -7,11 +7,11 @@ import java.time.LocalDateTime
 
 /**
  * JPA entity representing an organization in the system.
- * 
+ *
  * This entity maps to the "organizations" database table and represents
  * organizational units that can own portfolios and contain users. It supports
  * hierarchical organization structures through parent-child relationships.
- * 
+ *
  * @property id Unique identifier for the organization (auto-generated)
  * @property name Name of the organization (required)
  * @property description Optional description of the organization
@@ -19,7 +19,7 @@ import java.time.LocalDateTime
  * @property createdAt Timestamp when the organization was created
  * @property updatedAt Timestamp when the organization was last updated
  * @property parentOrganization Optional parent organization for hierarchical structures
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

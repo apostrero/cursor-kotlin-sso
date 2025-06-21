@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.port
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 
 class CommandResultTest {
 
@@ -9,7 +9,7 @@ class CommandResultTest {
     fun `should create CommandResult with all parameters`() {
         val data = mapOf("key" to "value")
         val errors = listOf("error1", "error2")
-        
+
         val result = CommandResult(
             success = true,
             message = "Operation completed successfully",
@@ -82,14 +82,14 @@ class CommandResultTest {
     fun `should support data class equality`() {
         val data = "test data"
         val errors = listOf("error1")
-        
+
         val result1 = CommandResult(
             success = true,
             message = "Success",
             data = data,
             errors = errors
         )
-        
+
         val result2 = CommandResult(
             success = true,
             message = "Success",
@@ -154,8 +154,9 @@ class CommandResultTest {
     @Test
     fun `should handle complex data objects`() {
         data class ComplexData(val id: Long, val name: String, val items: List<String>)
+
         val complexData = ComplexData(1L, "Test", listOf("item1", "item2"))
-        
+
         val result = CommandResult.success("Complex data created", complexData)
 
         assertTrue(result.success)

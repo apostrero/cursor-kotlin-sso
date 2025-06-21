@@ -1,32 +1,32 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence
 
-import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
 import com.company.techportfolio.portfolio.adapter.out.persistence.entity.TechnologyEntity
-import com.company.techportfolio.portfolio.domain.port.TechnologyRepository
+import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
+import com.company.techportfolio.portfolio.domain.model.TechnologySummary
 import com.company.techportfolio.portfolio.domain.port.TechnologyQueryRepository
+import com.company.techportfolio.portfolio.domain.port.TechnologyRepository
 import com.company.techportfolio.shared.domain.model.Technology
 import com.company.techportfolio.shared.domain.model.TechnologyType
-import com.company.techportfolio.portfolio.domain.model.TechnologySummary
 import org.springframework.stereotype.Repository
-import reactor.core.publisher.Mono
 import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 
 /**
  * Technology Repository Adapter - Reactive Persistence Implementation
- * 
+ *
  * This adapter class implements both the TechnologyRepository and TechnologyQueryRepository
  * interfaces from the domain layer, providing the reactive persistence implementation for
  * technology data access within the hexagonal architecture. It translates between
  * domain models and R2DBC entities, delegating actual database operations to Spring Data
  * R2DBC repositories.
- * 
+ *
  * ## Architecture Role:
  * - Acts as an **outbound adapter** in the hexagonal architecture
  * - Implements domain port interfaces with infrastructure-specific code
  * - Isolates the domain layer from persistence implementation details
  * - Handles the translation between domain models and persistence entities
  * - Provides reactive streams for non-blocking database operations
- * 
+ *
  * ## Implementation Features:
  * - Dual implementation of both standard and query-optimized repository interfaces
  * - Mapping between domain models and R2DBC entities via extension functions
@@ -34,15 +34,15 @@ import reactor.core.publisher.Flux
  * - Reactive error handling for database operations with graceful fallbacks
  * - Support for various technology filtering criteria
  * - Non-blocking database operations throughout
- * 
+ *
  * ## Performance Considerations:
  * - Optimized for portfolio-based technology access patterns
  * - Lightweight summary objects for list operations
  * - Efficient search with multiple optional criteria
  * - Reactive streaming improves concurrency and resource utilization
- * 
+ *
  * @property technologyJpaRepository Spring Data R2DBC repository for technology entities
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see TechnologyRepository
@@ -57,13 +57,13 @@ class TechnologyRepositoryAdapter(
 ) : TechnologyRepository, TechnologyQueryRepository {
 
     // TechnologyRepository implementation
-    
+
     /**
      * Finds a technology by its unique identifier.
-     * 
+     *
      * Retrieves a technology entity by ID and maps it to the domain model.
      * Returns empty Mono if no technology is found with the given ID.
-     * 
+     *
      * @param id The unique identifier of the technology
      * @return Mono containing the domain technology model if found, empty otherwise
      */
@@ -75,10 +75,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds a technology by its name.
-     * 
+     *
      * Retrieves a technology entity by name and maps it to the domain model.
      * Used for name-based lookups across the system.
-     * 
+     *
      * @param name The name of the technology
      * @return Mono containing the domain technology model if found, empty otherwise
      */
@@ -90,10 +90,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies associated with a specific portfolio.
-     * 
+     *
      * Retrieves all technology entities for the given portfolio and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param portfolioId The unique identifier of the portfolio
      * @return Flux containing domain technology models in the portfolio
      */
@@ -105,10 +105,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies in a specific category.
-     * 
+     *
      * Retrieves all technology entities in the given category and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param category The technology category to filter by
      * @return Flux containing domain technology models in the category
      */
@@ -120,10 +120,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies of a specific type.
-     * 
+     *
      * Retrieves all technology entities of the given type and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param type The technology type to filter by
      * @return Flux containing domain technology models of the specified type
      */
@@ -135,10 +135,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies from a specific vendor.
-     * 
+     *
      * Retrieves all technology entities from the given vendor and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param vendorName The vendor name to filter by
      * @return Flux containing domain technology models from the vendor
      */
@@ -150,10 +150,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies with a specific maturity level.
-     * 
+     *
      * Retrieves all technology entities with the given maturity level and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param maturityLevel The maturity level to filter by
      * @return Flux containing domain technology models with the specified maturity level
      */
@@ -165,10 +165,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds all technologies with a specific risk level.
-     * 
+     *
      * Retrieves all technology entities with the given risk level and maps them
      * to domain models. Returns empty Flux if no technologies are found.
-     * 
+     *
      * @param riskLevel The risk level to filter by
      * @return Flux containing domain technology models with the specified risk level
      */
@@ -180,10 +180,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Saves a new technology to the repository.
-     * 
+     *
      * Converts the domain model to an entity, saves it to the database,
      * and returns the updated domain model with generated ID.
-     * 
+     *
      * @param technology The domain technology model to save
      * @return Mono containing the saved domain technology model with generated ID
      */
@@ -196,10 +196,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Updates an existing technology in the repository.
-     * 
+     *
      * Converts the domain model to an entity, updates it in the database,
      * and returns the updated domain model.
-     * 
+     *
      * @param technology The domain technology model to update
      * @return Mono containing the updated domain technology model
      */
@@ -212,11 +212,11 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Deletes a technology by its unique identifier.
-     * 
+     *
      * Attempts to delete the technology entity with the given ID.
      * Returns true if successful, false if the technology doesn't exist
      * or another error occurs.
-     * 
+     *
      * @param id The unique identifier of the technology to delete
      * @return Mono<Boolean> containing true if the technology was deleted, false otherwise
      */
@@ -235,9 +235,9 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Checks if a technology exists by its unique identifier.
-     * 
+     *
      * Delegates to the R2DBC repository to check for entity existence.
-     * 
+     *
      * @param id The unique identifier of the technology
      * @return Mono<Boolean> containing true if the technology exists, false otherwise
      */
@@ -248,9 +248,9 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Counts the number of technologies in a specific portfolio.
-     * 
+     *
      * Delegates to the R2DBC repository to count entities by portfolio.
-     * 
+     *
      * @param portfolioId The unique identifier of the portfolio
      * @return Mono<Long> containing the number of technologies in the portfolio
      */
@@ -260,13 +260,13 @@ class TechnologyRepositoryAdapter(
     }
 
     // TechnologyQueryRepository implementation
-    
+
     /**
      * Finds a technology summary by its unique identifier.
-     * 
+     *
      * Retrieves a technology entity by ID and maps it to a summary model.
      * Returns empty Mono if no technology is found with the given ID.
-     * 
+     *
      * @param id The unique identifier of the technology
      * @return Mono containing the technology summary if found, empty otherwise
      */
@@ -278,10 +278,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds technology summaries for a specific portfolio.
-     * 
+     *
      * Retrieves all technology entities for the given portfolio and maps them
      * to summary models.
-     * 
+     *
      * @param portfolioId The unique identifier of the portfolio
      * @return Flux containing technology summaries in the portfolio
      */
@@ -293,10 +293,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds technology summaries in a specific category.
-     * 
+     *
      * Retrieves all technology entities in the given category and maps them
      * to summary models.
-     * 
+     *
      * @param category The technology category to filter by
      * @return Flux containing technology summaries in the category
      */
@@ -308,10 +308,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds technology summaries of a specific type.
-     * 
+     *
      * Retrieves all technology entities of the given type and maps them
      * to summary models.
-     * 
+     *
      * @param type The technology type to filter by
      * @return Flux containing technology summaries of the specified type
      */
@@ -323,10 +323,10 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Finds technology summaries from a specific vendor.
-     * 
+     *
      * Retrieves all technology entities from the given vendor and maps them
      * to summary models.
-     * 
+     *
      * @param vendorName The vendor name to filter by
      * @return Flux containing technology summaries from the vendor
      */
@@ -337,41 +337,11 @@ class TechnologyRepositoryAdapter(
     }
 
     /**
-     * Finds technology summaries with a specific maturity level.
-     * 
-     * Retrieves all technology entities with the given maturity level and maps them
-     * to summary models.
-     * 
-     * @param maturityLevel The maturity level to filter by
-     * @return Flux containing technology summaries with the specified maturity level
-     */
-    override fun findTechnologySummariesByMaturityLevel(maturityLevel: com.company.techportfolio.shared.domain.model.MaturityLevel): Flux<TechnologySummary> {
-        return technologyJpaRepository.findByMaturityLevel(maturityLevel)
-            .map { it.toSummary() }
-            .onErrorMap { e -> RuntimeException("Error finding technology summaries for maturity level $maturityLevel", e) }
-    }
-
-    /**
-     * Finds technology summaries with a specific risk level.
-     * 
-     * Retrieves all technology entities with the given risk level and maps them
-     * to summary models.
-     * 
-     * @param riskLevel The risk level to filter by
-     * @return Flux containing technology summaries with the specified risk level
-     */
-    override fun findTechnologySummariesByRiskLevel(riskLevel: com.company.techportfolio.shared.domain.model.RiskLevel): Flux<TechnologySummary> {
-        return technologyJpaRepository.findByRiskLevel(riskLevel)
-            .map { it.toSummary() }
-            .onErrorMap { e -> RuntimeException("Error finding technology summaries for risk level $riskLevel", e) }
-    }
-
-    /**
      * Retrieves all active technology summaries.
-     * 
+     *
      * Retrieves all technology entities with isActive=true and maps them
      * to summary models.
-     * 
+     *
      * @return Flux containing all active technology summaries
      */
     override fun findAllTechnologySummaries(): Flux<TechnologySummary> {
@@ -382,29 +352,34 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Searches technologies with flexible filtering criteria.
-     * 
+     *
      * Delegates to the R2DBC repository for searching, then maps results
      * to summary models.
-     * 
+     *
      * @param name Optional name filter for partial matching
      * @param category Optional category filter
      * @param type Optional technology type filter
      * @param vendorName Optional vendor name filter for partial matching
      * @return Flux containing technology summaries matching the search criteria
      */
-    override fun searchTechnologies(name: String?, category: String?, type: TechnologyType?, vendorName: String?): Flux<TechnologySummary> {
+    override fun searchTechnologies(
+        name: String?,
+        category: String?,
+        type: TechnologyType?,
+        vendorName: String?
+    ): Flux<TechnologySummary> {
         return technologyJpaRepository.searchTechnologies(name, category, type, vendorName)
             .map { it.toSummary() }
             .onErrorMap { e -> RuntimeException("Error searching technologies", e) }
     }
 
     // Extension functions for mapping
-    
+
     /**
      * Converts a technology entity to a domain model.
-     * 
+     *
      * Maps all properties from the R2DBC entity to the domain model.
-     * 
+     *
      * @return The domain technology model
      */
     private fun TechnologyEntity.toDomain(): Technology {
@@ -432,9 +407,9 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Converts a domain technology model to an entity.
-     * 
+     *
      * Maps all properties from the domain model to the R2DBC entity.
-     * 
+     *
      * @return The technology R2DBC entity
      */
     private fun Technology.toEntity(): TechnologyEntity {
@@ -462,9 +437,9 @@ class TechnologyRepositoryAdapter(
 
     /**
      * Converts a technology entity to a summary model.
-     * 
+     *
      * Maps essential properties from the R2DBC entity to the summary model.
-     * 
+     *
      * @return The technology summary model
      */
     private fun TechnologyEntity.toSummary(): TechnologySummary {
@@ -475,10 +450,8 @@ class TechnologyRepositoryAdapter(
             type = this.type,
             maturityLevel = this.maturityLevel,
             riskLevel = this.riskLevel,
-            vendorName = this.vendorName,
             annualCost = this.annualCost,
-            portfolioId = this.portfolioId,
-            lastUpdated = this.updatedAt ?: this.createdAt
+            vendorName = this.vendorName
         )
     }
 } 

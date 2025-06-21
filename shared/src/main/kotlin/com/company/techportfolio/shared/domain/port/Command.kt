@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.port
 
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 /**
  * Base abstract class for all commands in the CQRS pattern.

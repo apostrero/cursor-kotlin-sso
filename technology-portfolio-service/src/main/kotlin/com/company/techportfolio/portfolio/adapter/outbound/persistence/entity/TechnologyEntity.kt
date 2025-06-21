@@ -1,8 +1,8 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence.entity
 
-import com.company.techportfolio.shared.domain.model.TechnologyType
 import com.company.techportfolio.shared.domain.model.MaturityLevel
 import com.company.techportfolio.shared.domain.model.RiskLevel
+import com.company.techportfolio.shared.domain.model.TechnologyType
 import org.springframework.data.annotation.Id
 import org.springframework.data.relational.core.mapping.Column
 import org.springframework.data.relational.core.mapping.Table
@@ -11,18 +11,18 @@ import java.time.LocalDateTime
 
 /**
  * Technology Entity - R2DBC Database Mapping
- * 
+ *
  * This entity class represents the database mapping for technologies within
  * portfolios in the persistence layer. It uses R2DBC annotations to define the
  * table structure, constraints, and relationships for reactive technology
  * data storage including cost tracking and vendor management.
- * 
+ *
  * ## Database Mapping:
  * - **Table**: `technologies`
  * - **Primary Key**: Auto-generated Long ID
  * - **Foreign Key**: portfolio_id references portfolios table
  * - **Indexes**: Recommended on portfolio_id, category, type, vendor_name
- * 
+ *
  * ## Business Rules Enforced:
  * - Technology name is required
  * - Category classification is required
@@ -31,22 +31,22 @@ import java.time.LocalDateTime
  * - Cost fields use precision 15, scale 2 for financial accuracy
  * - Active flag defaults to true for new technologies
  * - Created timestamp is required and immutable
- * 
+ *
  * ## Cost Management:
  * - Annual, license, and maintenance costs tracked separately
  * - BigDecimal used for precise financial calculations
  * - All cost fields are optional to support incomplete data
- * 
+ *
  * ## Vendor Information:
  * - Vendor name and contact information tracking
  * - Support contract expiry date management
  * - Optional fields to support various technology sources
- * 
+ *
  * ## Reactive Features:
  * - Non-blocking database operations
  * - Reactive stream support
  * - Optimized for reactive repositories
- * 
+ *
  * @property id Unique identifier (auto-generated primary key)
  * @property name Technology name (required)
  * @property description Optional detailed description (TEXT field)
@@ -65,7 +65,7 @@ import java.time.LocalDateTime
  * @property createdAt Timestamp when technology was created (immutable)
  * @property updatedAt Timestamp when technology was last updated (nullable)
  * @property portfolioId Foreign key to the owning portfolio (required)
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see TechnologyType
@@ -76,7 +76,7 @@ import java.time.LocalDateTime
 data class TechnologyEntity(
     /**
      * Unique identifier for the technology.
-     * 
+     *
      * Auto-generated primary key using database identity strategy.
      * Null for new entities before persistence.
      */
@@ -85,7 +85,7 @@ data class TechnologyEntity(
 
     /**
      * Name of the technology.
-     * 
+     *
      * Required field that serves as the primary identifier.
      * Should be descriptive and recognizable by users.
      */
@@ -94,7 +94,7 @@ data class TechnologyEntity(
 
     /**
      * Optional detailed description of the technology.
-     * 
+     *
      * Stored as TEXT column to support longer descriptions.
      * Can include purpose, features, and usage information.
      */
@@ -103,7 +103,7 @@ data class TechnologyEntity(
 
     /**
      * Technology category classification.
-     * 
+     *
      * Required field for organizing and filtering technologies.
      * Examples: "Framework", "Database", "Cloud Service", "Tool".
      */
@@ -112,7 +112,7 @@ data class TechnologyEntity(
 
     /**
      * Optional version information.
-     * 
+     *
      * Can store version numbers, release names, or other
      * version identifiers for technology lifecycle tracking.
      */
@@ -121,7 +121,7 @@ data class TechnologyEntity(
 
     /**
      * Technology type classification.
-     * 
+     *
      * Enum value stored as string for standardized categorization.
      * Required field for technology taxonomy and reporting.
      */
@@ -130,7 +130,7 @@ data class TechnologyEntity(
 
     /**
      * Maturity level assessment.
-     * 
+     *
      * Enum value indicating the technology's maturity stage.
      * Used for risk assessment and adoption decisions.
      */
@@ -139,7 +139,7 @@ data class TechnologyEntity(
 
     /**
      * Risk level assessment.
-     * 
+     *
      * Enum value indicating the associated risk level.
      * Critical for compliance and risk management reporting.
      */
@@ -148,7 +148,7 @@ data class TechnologyEntity(
 
     /**
      * Optional annual cost of the technology.
-     * 
+     *
      * BigDecimal with precision 15, scale 2 for financial accuracy.
      * Includes all recurring annual expenses for this technology.
      */
@@ -157,7 +157,7 @@ data class TechnologyEntity(
 
     /**
      * Optional licensing cost.
-     * 
+     *
      * BigDecimal for precise financial tracking of license expenses.
      * May be one-time or recurring depending on license model.
      */
@@ -166,7 +166,7 @@ data class TechnologyEntity(
 
     /**
      * Optional maintenance cost.
-     * 
+     *
      * BigDecimal for tracking ongoing maintenance and support costs.
      * Separate from licensing for detailed cost analysis.
      */
@@ -175,7 +175,7 @@ data class TechnologyEntity(
 
     /**
      * Optional vendor or supplier name.
-     * 
+     *
      * Tracks the primary vendor for vendor relationship management
      * and consolidation reporting.
      */
@@ -184,7 +184,7 @@ data class TechnologyEntity(
 
     /**
      * Optional vendor contact information.
-     * 
+     *
      * Can store email, phone, or other contact details
      * for vendor relationship management.
      */
@@ -193,7 +193,7 @@ data class TechnologyEntity(
 
     /**
      * Optional support contract expiration date.
-     * 
+     *
      * Tracks when support contracts expire for proactive
      * renewal management and risk mitigation.
      */
@@ -202,7 +202,7 @@ data class TechnologyEntity(
 
     /**
      * Active flag for the technology.
-     * 
+     *
      * Used for soft deletion and filtering. Defaults to true.
      * Inactive technologies are typically hidden from normal operations.
      */
@@ -211,7 +211,7 @@ data class TechnologyEntity(
 
     /**
      * Timestamp when the technology was created.
-     * 
+     *
      * Immutable field set once during initial creation.
      * Required field for audit trail and lifecycle tracking.
      */
@@ -220,7 +220,7 @@ data class TechnologyEntity(
 
     /**
      * Timestamp when the technology was last updated.
-     * 
+     *
      * Nullable field that gets updated on each modification.
      * Null for technologies that have never been updated after creation.
      */
@@ -229,7 +229,7 @@ data class TechnologyEntity(
 
     /**
      * Foreign key to the owning portfolio.
-     * 
+     *
      * Required field that establishes the portfolio relationship.
      * References the portfolio ID from the portfolios table.
      */

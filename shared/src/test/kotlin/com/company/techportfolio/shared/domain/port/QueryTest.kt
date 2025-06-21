@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.port
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 // Test concrete implementation of Query
@@ -53,13 +53,13 @@ class QueryTest {
     fun `should support data class equality for concrete queries`() {
         val queryId = "same-id"
         val timestamp = LocalDateTime.now()
-        
+
         val query1 = TestQuery(
             queryData = "same data",
             customQueryId = queryId,
             customTimestamp = timestamp
         )
-        
+
         val query2 = TestQuery(
             queryData = "same data",
             customQueryId = queryId,

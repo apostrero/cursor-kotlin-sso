@@ -4,11 +4,11 @@ import java.time.LocalDateTime
 
 /**
  * Represents the result of an authentication attempt in the API Gateway.
- * 
+ *
  * This data class encapsulates all information related to user authentication,
  * including success/failure status, user details, security tokens, and session information.
  * It serves as the primary contract between authentication adapters and the domain service.
- * 
+ *
  * @property isAuthenticated Indicates whether the authentication attempt was successful
  * @property username The authenticated user's username, null if authentication failed
  * @property authorities List of granted authorities/roles for the authenticated user
@@ -16,7 +16,7 @@ import java.time.LocalDateTime
  * @property sessionIndex Unique session identifier for SAML SSO sessions, may be null for other auth methods
  * @property expiresAt Timestamp when the authentication token expires, null if authentication failed
  * @property errorMessage Descriptive error message when authentication fails, null on success
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -32,7 +32,7 @@ data class AuthenticationResult(
     companion object {
         /**
          * Creates a successful authentication result with all required user information.
-         * 
+         *
          * @param username The authenticated user's username
          * @param authorities List of user authorities/roles
          * @param token Generated JWT token for the session
@@ -57,7 +57,7 @@ data class AuthenticationResult(
 
         /**
          * Creates a failed authentication result with an error message.
-         * 
+         *
          * @param errorMessage Descriptive message explaining the authentication failure
          * @return AuthenticationResult indicating failed authentication
          */
@@ -68,10 +68,10 @@ data class AuthenticationResult(
 
         /**
          * Creates an authentication result for a user who is not authenticated.
-         * 
+         *
          * This is typically used when no authentication credentials are provided
          * or when the user session has expired.
-         * 
+         *
          * @return AuthenticationResult indicating no authentication
          */
         fun notAuthenticated(): AuthenticationResult = AuthenticationResult(

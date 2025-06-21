@@ -1,28 +1,25 @@
 package com.company.techportfolio.portfolio.config
 
-import io.swagger.v3.oas.models.OpenAPI
-import io.swagger.v3.oas.models.info.Info
-import io.swagger.v3.oas.models.info.Contact
-import io.swagger.v3.oas.models.info.License
-import io.swagger.v3.oas.models.servers.Server
-import io.swagger.v3.oas.models.tags.Tag
 import io.swagger.v3.oas.models.Components
-import io.swagger.v3.oas.models.security.SecurityScheme
-import io.swagger.v3.oas.models.security.SecurityRequirement
-import io.swagger.v3.oas.models.responses.ApiResponse
-import io.swagger.v3.oas.models.responses.ApiResponses
+import io.swagger.v3.oas.models.OpenAPI
+import io.swagger.v3.oas.models.info.Contact
+import io.swagger.v3.oas.models.info.Info
+import io.swagger.v3.oas.models.info.License
+import io.swagger.v3.oas.models.media.ArraySchema
 import io.swagger.v3.oas.models.media.Content
 import io.swagger.v3.oas.models.media.MediaType
 import io.swagger.v3.oas.models.media.Schema
-import io.swagger.v3.oas.models.media.ArraySchema
-import io.swagger.v3.oas.models.examples.Example
+import io.swagger.v3.oas.models.responses.ApiResponse
+import io.swagger.v3.oas.models.security.SecurityRequirement
+import io.swagger.v3.oas.models.security.SecurityScheme
+import io.swagger.v3.oas.models.servers.Server
+import io.swagger.v3.oas.models.tags.Tag
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.MediaType
 
 /**
  * OpenAPI 3.0 Configuration for Technology Portfolio Service
- * 
+ *
  * Provides comprehensive API documentation with reactive examples,
  * security definitions, and detailed response schemas.
  */
@@ -35,7 +32,8 @@ class OpenApiConfig {
             .info(
                 Info()
                     .title("Technology Portfolio Service API")
-                    .description("""
+                    .description(
+                        """
                         ## Overview
                         
                         The Technology Portfolio Service provides comprehensive portfolio management capabilities
@@ -93,7 +91,8 @@ class OpenApiConfig {
                         - Content-Type: `text/event-stream`
                         - Connection: `keep-alive`
                         - Cache-Control: `no-cache`
-                    """.trimIndent())
+                    """.trimIndent()
+                    )
                     .version("1.0.0")
                     .contact(
                         Contact()
@@ -163,14 +162,24 @@ class OpenApiConfig {
                                 .content(
                                     Content()
                                         .addMediaType(
-                                            MediaType.APPLICATION_JSON_VALUE,
+                                            "application/json",
                                             MediaType()
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties("error", Schema<Any>().type("string").example("Unauthorized"))
-                                                        .addProperties("message", Schema<Any>().type("string").example("Authentication required"))
-                                                        .addProperties("timestamp", Schema<Any>().type("string").example("2024-01-15T10:30:00Z"))
+                                                        .addProperties(
+                                                            "error",
+                                                            Schema<Any>().type("string").example("Unauthorized")
+                                                        )
+                                                        .addProperties(
+                                                            "message",
+                                                            Schema<Any>().type("string")
+                                                                .example("Authentication required")
+                                                        )
+                                                        .addProperties(
+                                                            "timestamp",
+                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        )
                                                 )
                                         )
                                 ),
@@ -179,14 +188,24 @@ class OpenApiConfig {
                                 .content(
                                     Content()
                                         .addMediaType(
-                                            MediaType.APPLICATION_JSON_VALUE,
+                                            "application/json",
                                             MediaType()
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties("error", Schema<Any>().type("string").example("Forbidden"))
-                                                        .addProperties("message", Schema<Any>().type("string").example("Insufficient permissions"))
-                                                        .addProperties("timestamp", Schema<Any>().type("string").example("2024-01-15T10:30:00Z"))
+                                                        .addProperties(
+                                                            "error",
+                                                            Schema<Any>().type("string").example("Forbidden")
+                                                        )
+                                                        .addProperties(
+                                                            "message",
+                                                            Schema<Any>().type("string")
+                                                                .example("Insufficient permissions")
+                                                        )
+                                                        .addProperties(
+                                                            "timestamp",
+                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        )
                                                 )
                                         )
                                 ),
@@ -195,14 +214,23 @@ class OpenApiConfig {
                                 .content(
                                     Content()
                                         .addMediaType(
-                                            MediaType.APPLICATION_JSON_VALUE,
+                                            "application/json",
                                             MediaType()
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties("error", Schema<Any>().type("string").example("Not Found"))
-                                                        .addProperties("message", Schema<Any>().type("string").example("Resource not found"))
-                                                        .addProperties("timestamp", Schema<Any>().type("string").example("2024-01-15T10:30:00Z"))
+                                                        .addProperties(
+                                                            "error",
+                                                            Schema<Any>().type("string").example("Not Found")
+                                                        )
+                                                        .addProperties(
+                                                            "message",
+                                                            Schema<Any>().type("string").example("Resource not found")
+                                                        )
+                                                        .addProperties(
+                                                            "timestamp",
+                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        )
                                                 )
                                         )
                                 ),
@@ -211,15 +239,32 @@ class OpenApiConfig {
                                 .content(
                                     Content()
                                         .addMediaType(
-                                            MediaType.APPLICATION_JSON_VALUE,
+                                            "application/json",
                                             MediaType()
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties("error", Schema<Any>().type("string").example("Bad Request"))
-                                                        .addProperties("message", Schema<Any>().type("string").example("Validation failed"))
-                                                        .addProperties("timestamp", Schema<Any>().type("string").example("2024-01-15T10:30:00Z"))
-                                                        .addProperties("errors", ArraySchema().items(Schema<Any>().type("string")).example(listOf("Name is required", "Description cannot be empty")))
+                                                        .addProperties(
+                                                            "error",
+                                                            Schema<Any>().type("string").example("Bad Request")
+                                                        )
+                                                        .addProperties(
+                                                            "message",
+                                                            Schema<Any>().type("string").example("Validation failed")
+                                                        )
+                                                        .addProperties(
+                                                            "timestamp",
+                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        )
+                                                        .addProperties(
+                                                            "errors",
+                                                            ArraySchema().items(Schema<Any>().type("string")).example(
+                                                                listOf(
+                                                                    "Name is required",
+                                                                    "Description cannot be empty"
+                                                                )
+                                                            )
+                                                        )
                                                 )
                                         )
                                 ),
@@ -228,14 +273,25 @@ class OpenApiConfig {
                                 .content(
                                     Content()
                                         .addMediaType(
-                                            MediaType.APPLICATION_JSON_VALUE,
+                                            "application/json",
                                             MediaType()
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties("error", Schema<Any>().type("string").example("Internal Server Error"))
-                                                        .addProperties("message", Schema<Any>().type("string").example("An unexpected error occurred"))
-                                                        .addProperties("timestamp", Schema<Any>().type("string").example("2024-01-15T10:30:00Z"))
+                                                        .addProperties(
+                                                            "error",
+                                                            Schema<Any>().type("string")
+                                                                .example("Internal Server Error")
+                                                        )
+                                                        .addProperties(
+                                                            "message",
+                                                            Schema<Any>().type("string")
+                                                                .example("An unexpected error occurred")
+                                                        )
+                                                        .addProperties(
+                                                            "timestamp",
+                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        )
                                                 )
                                         )
                                 )

@@ -1,14 +1,14 @@
 package com.company.techportfolio.portfolio.domain.port
 
-import com.company.techportfolio.shared.model.TechnologyDependency
 import com.company.techportfolio.shared.model.DependencyType
+import com.company.techportfolio.shared.model.TechnologyDependency
 
 /**
  * Repository interface for technology dependency persistence operations.
- * 
+ *
  * This interface defines the contract for data access operations related to
  * technology dependencies within the portfolio service.
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

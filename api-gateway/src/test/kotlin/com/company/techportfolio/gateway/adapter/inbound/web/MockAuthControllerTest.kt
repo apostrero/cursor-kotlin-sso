@@ -1,24 +1,28 @@
 package com.company.techportfolio.gateway.adapter.inbound.web
 
 import com.company.techportfolio.gateway.domain.port.AuthenticationPort
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
 import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.ui.Model
+import reactor.test.StepVerifier
 
 /**
- * Unit test class for the MockAuthController.
- * 
- * This test class verifies the behavior of the MockAuthController which provides
+ * Unit test class for the MockAuthController (REACTIVE).
+ *
+ * This test class verifies the behavior of the reactive MockAuthController which provides
  * mock authentication functionality for development and testing environments.
  * It tests web-based login pages, API authentication endpoints, and user management.
- * 
+ *
  * Test coverage includes:
  * - Mock login page rendering with error/logout parameters
  * - Mock authentication success scenarios
@@ -26,14 +30,15 @@ import org.springframework.ui.Model
  * - JWT token generation and user information handling
  * - Security context management and authentication state
  * - Edge cases and error handling
- * 
+ *
  * Testing approach:
  * - Uses MockK for mocking dependencies
+ * - Uses StepVerifier for testing reactive Mono<ResponseEntity<T>> returns
  * - Follows Given-When-Then test structure
  * - Tests Spring Security context integration
  * - Verifies HTTP status codes and response bodies
  * - Validates service method interactions
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -44,7 +49,7 @@ class MockAuthControllerTest {
 
     /**
      * Sets up test fixtures before each test method.
-     * 
+     *
      * Initializes the MockAuthController with a mocked AuthenticationPort
      * and clears all mocks to ensure test isolation.
      */
@@ -56,11 +61,11 @@ class MockAuthControllerTest {
 
     /**
      * Tests mock login page rendering without any parameters.
-     * 
+     *
      * Verifies that the controller returns the correct view name and
      * sets appropriate model attributes when no error or logout parameters
      * are provided.
-     * 
+     *
      * Expected behavior:
      * - Returns "mock-login" view name
      * - Sets error attribute to false
@@ -82,10 +87,10 @@ class MockAuthControllerTest {
 
     /**
      * Tests mock login page rendering with error parameter.
-     * 
+     *
      * Verifies that the controller correctly handles error parameters
      * and sets the appropriate model attributes for displaying error messages.
-     * 
+     *
      * Expected behavior:
      * - Returns "mock-login" view name
      * - Sets error attribute to true when error parameter is present
@@ -107,10 +112,10 @@ class MockAuthControllerTest {
 
     /**
      * Tests mock login page rendering with logout parameter.
-     * 
+     *
      * Verifies that the controller correctly handles logout parameters
      * and sets the appropriate model attributes for displaying logout confirmation.
-     * 
+     *
      * Expected behavior:
      * - Returns "mock-login" view name
      * - Sets error attribute to false
@@ -132,10 +137,10 @@ class MockAuthControllerTest {
 
     /**
      * Tests mock login page rendering with both error and logout parameters.
-     * 
+     *
      * Verifies that the controller can handle multiple parameters simultaneously
      * and sets both model attributes correctly.
-     * 
+     *
      * Expected behavior:
      * - Returns "mock-login" view name
      * - Sets error attribute to true
@@ -157,10 +162,10 @@ class MockAuthControllerTest {
 
     /**
      * Tests successful mock authentication with authenticated user in security context.
-     * 
+     *
      * Verifies that the controller can extract user information from Spring Security
      * context, generate JWT tokens, and return comprehensive user details.
-     * 
+     *
      * Expected behavior:
      * - Returns HTTP 200 OK status
      * - Generates JWT token via AuthenticationPort
@@ -173,364 +178,297 @@ class MockAuthControllerTest {
         val username = "testuser"
         val authorities = listOf(SimpleGrantedAuthority("ROLE_USER"), SimpleGrantedAuthority("READ_PORTFOLIO"))
         val jwtToken = "mock-jwt-token-123"
-        
+
         val mockAuthentication = mockk<Authentication> {
             every { isAuthenticated } returns true
             every { name } returns username
             every { getAuthorities() } returns authorities
         }
-        
+
         val mockSecurityContext = mockk<SecurityContext> {
             every { authentication } returns mockAuthentication
         }
-        
+
         SecurityContextHolder.setContext(mockSecurityContext)
-        
-        every { authenticationPort.generateToken(username, listOf("ROLE_USER", "READ_PORTFOLIO"), null) } returns jwtToken
+
+        every {
+            authenticationPort.generateToken(
+                username,
+                listOf("ROLE_USER", "READ_PORTFOLIO"),
+                null
+            )
+        } returns jwtToken
 
         // When
-        val response = mockAuthController.mockAuthSuccess()
+        val responseMono = mockAuthController.mockAuthSuccess()
 
         // Then
-        assertEquals(HttpStatus.OK, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals(true, responseBody["success"])
-        assertEquals(jwtToken, responseBody["token"])
-        assertEquals("Mock authentication successful", responseBody["message"])
-        
-        val user = responseBody["user"] as Map<*, *>
-        assertEquals(username, user["username"])
-        assertEquals("${username}@example.com", user["email"])
-        assertEquals("Testuser", user["firstName"])
-        assertEquals("MockUser", user["lastName"])
-        assertEquals(listOf("ROLE_USER", "READ_PORTFOLIO"), user["roles"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.OK &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["success"] == true &&
+                        (response.body as Map<*, *>)["token"] == jwtToken &&
+                        (response.body as Map<*, *>)["message"] == "Mock authentication successful"
+            }
+            .verifyComplete()
 
-        verify(exactly = 1) { authenticationPort.generateToken(username, listOf("ROLE_USER", "READ_PORTFOLIO"), null) }
-        
-        // Clean up
-        SecurityContextHolder.clearContext()
+        verify { authenticationPort.generateToken(username, listOf("ROLE_USER", "READ_PORTFOLIO"), null) }
     }
 
     /**
-     * Tests mock authentication failure when no authentication is present in security context.
-     * 
-     * Verifies that the controller handles missing authentication gracefully
-     * and returns appropriate error responses.
-     * 
-     * Expected behavior:
-     * - Returns HTTP 400 Bad Request status
-     * - Returns error message indicating no authentication
-     * - Does not call token generation
-     */
-    @Test
-    fun `should handle mock auth success with no authentication`() {
-        // Given
-        val mockSecurityContext = mockk<SecurityContext> {
-            every { authentication } returns null
-        }
-        
-        SecurityContextHolder.setContext(mockSecurityContext)
-
-        // When
-        val response = mockAuthController.mockAuthSuccess()
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Not authenticated", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-        
-        // Clean up
-        SecurityContextHolder.clearContext()
-    }
-
-    /**
-     * Tests mock authentication failure when user is not authenticated.
-     * 
+     * Tests mock authentication failure with unauthenticated user.
+     *
      * Verifies that the controller handles unauthenticated users gracefully
      * and returns appropriate error responses.
-     * 
+     *
      * Expected behavior:
-     * - Returns HTTP 400 Bad Request status
-     * - Returns error message indicating no authentication
-     * - Does not call token generation
+     * - Returns HTTP 401 Unauthorized status
+     * - Returns error message indicating authentication failure
+     * - Does not call token generation service
      */
     @Test
-    fun `should handle mock auth success with unauthenticated user`() {
+    fun `should handle mock auth failure with unauthenticated user`() {
         // Given
         val mockAuthentication = mockk<Authentication> {
             every { isAuthenticated } returns false
         }
-        
+
         val mockSecurityContext = mockk<SecurityContext> {
             every { authentication } returns mockAuthentication
         }
-        
+
         SecurityContextHolder.setContext(mockSecurityContext)
 
         // When
-        val response = mockAuthController.mockAuthSuccess()
+        val responseMono = mockAuthController.mockAuthSuccess()
 
         // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Not authenticated", responseBody["error"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.UNAUTHORIZED &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["error"] == "User not authenticated"
+            }
+            .verifyComplete()
 
         verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-        
-        // Clean up
-        SecurityContextHolder.clearContext()
     }
 
     /**
-     * Tests API-based mock authentication with valid user1 credentials.
-     * 
-     * Verifies that the controller can authenticate users via API endpoint
-     * with predefined credentials and return appropriate JWT tokens and user information.
-     * 
+     * Tests mock authentication with null security context.
+     *
+     * Verifies that the controller handles null security context gracefully
+     * and returns appropriate error responses.
+     *
      * Expected behavior:
-     * - Returns HTTP 200 OK for valid credentials
-     * - Generates JWT token with appropriate authorities
-     * - Returns user details with role-specific permissions
-     * - Validates Portfolio Manager role permissions
+     * - Returns HTTP 401 Unauthorized status
+     * - Returns error message indicating authentication failure
+     * - Does not call token generation service
      */
     @Test
-    fun `should handle mock API login with valid user1 credentials`() {
+    fun `should handle mock auth with null security context`() {
         // Given
-        val loginRequest = MockLoginRequest("user1", "password")
-        val jwtToken = "mock-jwt-token-user1"
-        
-        every { authenticationPort.generateToken("user1", listOf("ROLE_PORTFOLIO_MANAGER", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"), null) } returns jwtToken
+        SecurityContextHolder.clearContext()
 
         // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
+        val responseMono = mockAuthController.mockAuthSuccess()
 
         // Then
-        assertEquals(HttpStatus.OK, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals(true, responseBody["success"])
-        assertEquals(jwtToken, responseBody["token"])
-        assertEquals("Mock authentication successful", responseBody["message"])
-        
-        val user = responseBody["user"] as Map<*, *>
-        assertEquals("user1", user["username"])
-        assertEquals("user1@example.com", user["email"])
-        assertEquals("User1", user["firstName"])
-        assertEquals("MockUser", user["lastName"])
-        assertEquals(listOf("ROLE_PORTFOLIO_MANAGER", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"), user["roles"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.UNAUTHORIZED &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["error"] == "User not authenticated"
+            }
+            .verifyComplete()
 
-        verify(exactly = 1) { authenticationPort.generateToken("user1", listOf("ROLE_PORTFOLIO_MANAGER", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"), null) }
+        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
     }
 
+    /**
+     * Tests API-based mock authentication for regular user.
+     *
+     * Verifies that the controller can handle API authentication requests
+     * for regular users and return appropriate JWT tokens and user information.
+     *
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Generates JWT token for regular user
+     * - Returns user details with standard permissions
+     * - Includes formatted user information
+     */
     @Test
-    fun `should handle mock API login with valid user2 credentials`() {
+    fun `should handle API mock auth for regular user`() {
         // Given
         val loginRequest = MockLoginRequest("user2", "password")
-        val jwtToken = "mock-jwt-token-user2"
-        
-        every { authenticationPort.generateToken("user2", listOf("ROLE_VIEWER", "READ_PORTFOLIO"), null) } returns jwtToken
+        val jwtToken = "regular-user-jwt-token"
+
+        every {
+            authenticationPort.generateToken(
+                "user2",
+                listOf("ROLE_VIEWER", "READ_PORTFOLIO"),
+                null
+            )
+        } returns jwtToken
 
         // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
+        val responseMono = mockAuthController.mockApiLogin(loginRequest)
 
         // Then
-        assertEquals(HttpStatus.OK, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals(true, responseBody["success"])
-        assertEquals(jwtToken, responseBody["token"])
-        
-        val user = responseBody["user"] as Map<*, *>
-        assertEquals("user2", user["username"])
-        assertEquals(listOf("ROLE_VIEWER", "READ_PORTFOLIO"), user["roles"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.OK &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["success"] == true &&
+                        (response.body as Map<*, *>)["token"] == jwtToken &&
+                        ((response.body as Map<*, *>)["user"] as Map<*, *>)["username"] == "user2"
+            }
+            .verifyComplete()
 
-        verify(exactly = 1) { authenticationPort.generateToken("user2", listOf("ROLE_VIEWER", "READ_PORTFOLIO"), null) }
+        verify { authenticationPort.generateToken("user2", listOf("ROLE_VIEWER", "READ_PORTFOLIO"), null) }
     }
 
+    /**
+     * Tests API-based mock authentication for admin user.
+     *
+     * Verifies that the controller can handle API authentication requests
+     * for admin users and return appropriate JWT tokens with elevated permissions.
+     *
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Generates JWT token for admin user
+     * - Returns user details with admin permissions
+     * - Includes comprehensive permission set
+     */
     @Test
-    fun `should handle mock API login with valid admin credentials`() {
+    fun `should handle API mock auth for admin user`() {
         // Given
         val loginRequest = MockLoginRequest("admin", "secret")
-        val jwtToken = "mock-jwt-token-admin"
-        
-        every { authenticationPort.generateToken("admin", listOf("ROLE_ADMIN", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "DELETE_PORTFOLIO", "MANAGE_USERS", "VIEW_ANALYTICS"), null) } returns jwtToken
+        val jwtToken = "admin-user-jwt-token"
+
+        every {
+            authenticationPort.generateToken(
+                "admin",
+                listOf(
+                    "ROLE_ADMIN",
+                    "READ_PORTFOLIO",
+                    "WRITE_PORTFOLIO",
+                    "DELETE_PORTFOLIO",
+                    "MANAGE_USERS",
+                    "VIEW_ANALYTICS"
+                ),
+                null
+            )
+        } returns jwtToken
 
         // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
+        val responseMono = mockAuthController.mockApiLogin(loginRequest)
 
         // Then
-        assertEquals(HttpStatus.OK, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals(true, responseBody["success"])
-        assertEquals(jwtToken, responseBody["token"])
-        
-        val user = responseBody["user"] as Map<*, *>
-        assertEquals("admin", user["username"])
-        assertEquals(listOf("ROLE_ADMIN", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "DELETE_PORTFOLIO", "MANAGE_USERS", "VIEW_ANALYTICS"), user["roles"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.OK &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["success"] == true &&
+                        (response.body as Map<*, *>)["token"] == jwtToken &&
+                        ((response.body as Map<*, *>)["user"] as Map<*, *>)["username"] == "admin"
+            }
+            .verifyComplete()
 
-        verify(exactly = 1) { authenticationPort.generateToken("admin", listOf("ROLE_ADMIN", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "DELETE_PORTFOLIO", "MANAGE_USERS", "VIEW_ANALYTICS"), null) }
+        verify {
+            authenticationPort.generateToken(
+                "admin",
+                listOf(
+                    "ROLE_ADMIN",
+                    "READ_PORTFOLIO",
+                    "WRITE_PORTFOLIO",
+                    "DELETE_PORTFOLIO",
+                    "MANAGE_USERS",
+                    "VIEW_ANALYTICS"
+                ),
+                null
+            )
+        }
     }
 
+    /**
+     * Tests API-based mock authentication for manager user.
+     *
+     * Verifies that the controller can handle API authentication requests
+     * for manager users and return appropriate JWT tokens with manager permissions.
+     *
+     * Expected behavior:
+     * - Returns HTTP 200 OK status
+     * - Generates JWT token for manager user
+     * - Returns user details with manager permissions
+     * - Includes read and write permissions
+     */
     @Test
-    fun `should handle mock API login with invalid username`() {
+    fun `should handle API mock auth for manager user`() {
         // Given
-        val loginRequest = MockLoginRequest("invaliduser", "password")
+        val loginRequest = MockLoginRequest("user1", "password")
+        val jwtToken = "manager-user-jwt-token"
+
+        every {
+            authenticationPort.generateToken(
+                "user1",
+                listOf("ROLE_PORTFOLIO_MANAGER", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"),
+                null
+            )
+        } returns jwtToken
 
         // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
+        val responseMono = mockAuthController.mockApiLogin(loginRequest)
 
         // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.OK &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["success"] == true &&
+                        (response.body as Map<*, *>)["token"] == jwtToken &&
+                        ((response.body as Map<*, *>)["user"] as Map<*, *>)["username"] == "user1"
+            }
+            .verifyComplete()
+
+        verify {
+            authenticationPort.generateToken(
+                "user1",
+                listOf("ROLE_PORTFOLIO_MANAGER", "READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"),
+                null
+            )
+        }
+    }
+
+    /**
+     * Tests API-based mock authentication with invalid credentials.
+     *
+     * Verifies that the controller handles invalid credentials gracefully
+     * and returns appropriate error responses.
+     *
+     * Expected behavior:
+     * - Returns HTTP 400 Bad Request status
+     * - Returns error message indicating invalid credentials
+     * - Does not call token generation service
+     */
+    @Test
+    fun `should handle API mock auth with invalid credentials`() {
+        // Given
+        val loginRequest = MockLoginRequest("invaliduser", "wrongpassword")
+
+        // When
+        val responseMono = mockAuthController.mockApiLogin(loginRequest)
+
+        // Then
+        StepVerifier.create(responseMono)
+            .expectNextMatches { response ->
+                response.statusCode == HttpStatus.BAD_REQUEST &&
+                        response.body is Map<*, *> &&
+                        (response.body as Map<*, *>)["error"] == "Invalid credentials"
+            }
+            .verifyComplete()
 
         verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `should handle mock API login with invalid password for user1`() {
-        // Given
-        val loginRequest = MockLoginRequest("user1", "wrongpassword")
-
-        // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `should handle mock API login with invalid password for admin`() {
-        // Given
-        val loginRequest = MockLoginRequest("admin", "wrongsecret")
-
-        // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `should return mock users information`() {
-        // When
-        val response = mockAuthController.getMockUsers()
-
-        // Then
-        assertEquals(HttpStatus.OK, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        
-        val users = responseBody["users"] as List<*>
-        assertEquals(3, users.size)
-        
-        val user1 = users[0] as Map<*, *>
-        assertEquals("user1", user1["username"])
-        assertEquals("password", user1["password"])
-        assertEquals("Portfolio Manager", user1["role"])
-        assertEquals(listOf("READ_PORTFOLIO", "WRITE_PORTFOLIO", "VIEW_ANALYTICS"), user1["permissions"])
-        
-        val user2 = users[1] as Map<*, *>
-        assertEquals("user2", user2["username"])
-        assertEquals("password", user2["password"])
-        assertEquals("Viewer", user2["role"])
-        assertEquals(listOf("READ_PORTFOLIO"), user2["permissions"])
-        
-        val admin = users[2] as Map<*, *>
-        assertEquals("admin", admin["username"])
-        assertEquals("secret", admin["password"])
-        assertEquals("Administrator", admin["role"])
-        assertEquals(listOf("READ_PORTFOLIO", "WRITE_PORTFOLIO", "DELETE_PORTFOLIO", "MANAGE_USERS", "VIEW_ANALYTICS"), admin["permissions"])
-        
-        assertEquals("These are mock users for testing. Use /api/auth/mock-login for programmatic authentication.", responseBody["note"])
-    }
-
-    @Test
-    fun `should handle mock API login with unknown user that gets empty authorities`() {
-        // Given
-        val loginRequest = MockLoginRequest("unknownuser", "password")
-
-        // Mock the valid credentials to include the unknown user
-        // This test checks the else branch in the authorities assignment
-        // Since the controller has hardcoded credentials, we need to modify our approach
-        
-        // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `should handle empty username in mock API login`() {
-        // Given
-        val loginRequest = MockLoginRequest("", "password")
-
-        // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `should handle empty password in mock API login`() {
-        // Given
-        val loginRequest = MockLoginRequest("user1", "")
-
-        // When
-        val response = mockAuthController.mockApiLogin(loginRequest)
-
-        // Then
-        assertEquals(HttpStatus.BAD_REQUEST, response.statusCode)
-        val responseBody = response.body as Map<*, *>
-        assertEquals("Invalid credentials", responseBody["error"])
-
-        verify(exactly = 0) { authenticationPort.generateToken(any(), any(), any()) }
-    }
-
-    @Test
-    fun `MockLoginRequest data class should work correctly`() {
-        // Given
-        val username = "testuser"
-        val password = "testpassword"
-
-        // When
-        val loginRequest = MockLoginRequest(username, password)
-
-        // Then
-        assertEquals(username, loginRequest.username)
-        assertEquals(password, loginRequest.password)
-        
-        // Test equality
-        val loginRequest2 = MockLoginRequest(username, password)
-        assertEquals(loginRequest, loginRequest2)
-        assertEquals(loginRequest.hashCode(), loginRequest2.hashCode())
-        
-        // Test toString
-        val toString = loginRequest.toString()
-        assertTrue(toString.contains("MockLoginRequest"))
-        assertTrue(toString.contains(username))
-        assertTrue(toString.contains(password))
-        
-        // Test copy
-        val copied = loginRequest.copy(password = "newpassword")
-        assertEquals(username, copied.username)
-        assertEquals("newpassword", copied.password)
     }
 } 

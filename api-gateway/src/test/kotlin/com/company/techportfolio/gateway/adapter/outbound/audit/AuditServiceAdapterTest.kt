@@ -2,7 +2,10 @@ package com.company.techportfolio.gateway.adapter.outbound.audit
 
 import com.company.techportfolio.gateway.adapter.out.audit.AuditServiceAdapter
 import com.company.techportfolio.gateway.domain.port.*
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.test.util.ReflectionTestUtils
@@ -12,11 +15,11 @@ import java.time.LocalDateTime
 
 /**
  * Unit test class for the AuditServiceAdapter.
- * 
+ *
  * This test class verifies the behavior of the AuditServiceAdapter which handles
  * communication with the external audit microservice via REST API calls.
  * It tests audit event logging functionality and error handling.
- * 
+ *
  * Test coverage includes:
  * - Authentication event logging to audit service
  * - Authorization event logging for compliance
@@ -24,14 +27,14 @@ import java.time.LocalDateTime
  * - Error handling when audit service is unavailable
  * - REST API communication patterns
  * - Event data serialization and transmission
- * 
+ *
  * Testing approach:
  * - Uses MockK for mocking RestTemplate dependencies
  * - Tests successful audit logging scenarios
  * - Verifies error handling and graceful degradation
  * - Validates REST API call parameters and URLs
  * - Ensures audit failures don't impact main operations
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -85,7 +88,13 @@ class AuditServiceAdapterTest {
         )
         val expectedUrl = "$auditServiceUrl/api/audit/authentication"
 
-        every { restTemplate.postForObject(expectedUrl, event, Unit::class.java) } throws RestClientException("Service unavailable")
+        every {
+            restTemplate.postForObject(
+                expectedUrl,
+                event,
+                Unit::class.java
+            )
+        } throws RestClientException("Service unavailable")
 
         // When
         auditServiceAdapter.logAuthenticationEvent(event)

@@ -108,9 +108,11 @@ chmod +x docker-start.sh
 - 🚪 API Gateway: http://localhost:8081
 - Test Users: `user1`/`password`, `user2`/`password`, `admin`/`secret`
 
-## 🧪 Testing Authentication
+## 🧪 Testing
 
-### Mock Authentication Testing
+### Authentication Testing
+
+#### Mock Authentication Testing
 
 ```bash
 # Get available test users
@@ -126,11 +128,85 @@ curl -X GET http://localhost:8081/api/portfolios \
   -H 'Authorization: Bearer YOUR_JWT_TOKEN'
 ```
 
-### SAML Authentication Testing
+#### SAML Authentication Testing
 
 1. Visit: http://localhost:8081/saml/login
 2. Authenticate with SimpleSAMLphp
 3. Receive JWT token and access APIs
+
+### Load and Performance Testing
+
+The system includes comprehensive load testing capabilities to ensure performance under various stress conditions.
+
+#### Quick Test Run (for CI/Development)
+
+```bash
+# Run all tests (load tests are disabled by default)
+./gradlew test
+
+# Run with test summary
+./gradlew test testSummary
+```
+
+#### Full Load Testing
+
+```bash
+# Enable and run load tests
+./gradlew test -Drun.load.tests=true
+
+# Run only load tests
+./gradlew test --tests "*ReactiveLoadTest*" -Drun.load.tests=true
+
+# Run load tests with detailed output
+./gradlew test --tests "*ReactiveLoadTest*" -Drun.load.tests=true --info
+```
+
+#### Load Test Scenarios
+
+The load testing suite includes:
+
+- **🚀 High Concurrent User Load**: Simulates 200 concurrent users with 10 requests each
+- **⏱️ Sustained Traffic Patterns**: 30-second sustained load at 50 requests/second
+- **💥 Burst Traffic Handling**: Sudden traffic bursts (500 requests) with recovery monitoring
+- **🧠 Memory Pressure**: Large dataset operations to test memory management
+- **🔗 Database Connection Pool Stress**: Tests connection pool behavior under load
+
+#### Performance Metrics
+
+Load tests measure and report:
+- **Throughput**: Requests per second
+- **Response Times**: Average, 95th, and 99th percentiles
+- **Success Rate**: Percentage of successful requests
+- **Memory Usage**: Memory consumption and leak detection
+- **Error Rates**: Failed request analysis
+
+#### Test Results Example
+
+```
+Load Test Results:
+Total requests: 2000
+Total time: 15432ms
+Throughput: 129.6 requests/second
+Success rate: 99.85%
+Average response time: 234ms
+95th percentile: 456ms
+99th percentile: 789ms
+Error count: 3
+```
+
+#### Production Load Testing
+
+For production-like load testing with full parameters:
+
+```bash
+# Production-scale load test
+./gradlew test -Drun.load.tests=true \
+  --tests "*ReactiveLoadTest*" \
+  -Dspring.profiles.active=test \
+  --parallel --max-workers=4
+```
+
+⚠️ **Note**: Load tests are disabled by default to prevent long build times. They can take 5-10 minutes to complete when fully enabled.
 
 ## 📋 Service URLs
 

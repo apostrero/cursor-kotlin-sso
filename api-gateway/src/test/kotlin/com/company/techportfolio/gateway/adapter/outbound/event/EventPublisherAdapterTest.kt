@@ -2,27 +2,30 @@ package com.company.techportfolio.gateway.adapter.outbound.event
 
 import com.company.techportfolio.gateway.adapter.out.event.EventPublisherAdapter
 import com.company.techportfolio.shared.domain.event.*
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.WebClient.RequestBodyUriSpec
-import org.springframework.web.reactive.function.client.WebClient.RequestBodySpec
-import org.springframework.web.reactive.function.client.WebClient.ResponseSpec
+import org.springframework.web.reactive.function.client.WebClient.*
+import org.springframework.web.reactive.function.client.WebClientResponseException
 import reactor.core.publisher.Mono
 import reactor.test.StepVerifier
-import org.springframework.http.HttpStatus
-import org.springframework.web.reactive.function.client.WebClientResponseException
 
 /**
  * Unit test class for the Reactive EventPublisherAdapter.
- * 
+ *
  * This test class verifies the behavior of the reactive EventPublisherAdapter which handles
  * publishing domain events to external microservices using WebClient. It ensures proper
  * reactive event propagation for authentication, authorization, and audit operations.
- * 
+ *
  * Test coverage includes:
  * - Reactive domain event publishing via WebClient
  * - Authentication event propagation (login, logout, failures)
@@ -31,7 +34,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
  * - Reactive error handling when event publishing fails
  * - Event data validation and integrity
  * - Reactive composition and backpressure handling
- * 
+ *
  * Testing approach:
  * - Uses MockK for mocking WebClient and its components
  * - Tests successful reactive event publishing scenarios
@@ -39,7 +42,7 @@ import org.springframework.web.reactive.function.client.WebClientResponseExcepti
  * - Validates event data and metadata
  * - Ensures proper reactive error handling for publishing failures
  * - Tests various domain event types with reactive patterns
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -49,7 +52,7 @@ class EventPublisherAdapterTest {
     private val requestBodyUriSpec = mockk<RequestBodyUriSpec>()
     private val requestBodySpec = mockk<RequestBodySpec>()
     private val responseSpec = mockk<ResponseSpec>()
-    
+
     private lateinit var eventPublisherAdapter: EventPublisherAdapter
 
     private val auditServiceUrl = "http://localhost:8084"
@@ -59,12 +62,12 @@ class EventPublisherAdapterTest {
     fun setUp() {
         clearAllMocks()
         eventPublisherAdapter = EventPublisherAdapter(webClient)
-        
+
         // Set the service URLs using reflection
         ReflectionTestUtils.setField(eventPublisherAdapter, "auditServiceUrl", auditServiceUrl)
         ReflectionTestUtils.setField(eventPublisherAdapter, "userManagementServiceUrl", userManagementServiceUrl)
         ReflectionTestUtils.setField(eventPublisherAdapter, "timeout", "5s")
-        
+
         // Setup WebClient mock chain
         every { webClient.post() } returns requestBodyUriSpec
         every { requestBodyUriSpec.uri(any<String>()) } returns requestBodySpec
@@ -87,7 +90,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             webClient.post()
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
@@ -109,7 +112,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -127,7 +130,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -148,7 +151,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -168,7 +171,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -189,7 +192,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
             requestBodySpec.bodyValue(event)
         }
@@ -207,7 +210,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
             requestBodySpec.bodyValue(event)
         }
@@ -226,7 +229,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
             requestBodySpec.bodyValue(event)
         }
@@ -241,7 +244,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -257,18 +260,20 @@ class EventPublisherAdapterTest {
             userAgent = "Mozilla/5.0"
         )
 
-        every { responseSpec.bodyToMono(Void::class.java) } returns 
-            Mono.error(WebClientResponseException.create(
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "Service unavailable",
-                null, null, null
-            ))
+        every { responseSpec.bodyToMono(Void::class.java) } returns
+                Mono.error(
+                    WebClientResponseException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "Service unavailable",
+                        HttpHeaders.EMPTY, ByteArray(0), null
+                    )
+                )
 
         // When & Then - should complete successfully despite error
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
             requestBodySpec.bodyValue(event)
         }
@@ -285,18 +290,20 @@ class EventPublisherAdapterTest {
             lastName = "User"
         )
 
-        every { responseSpec.bodyToMono(Void::class.java) } returns 
-            Mono.error(WebClientResponseException.create(
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "Service unavailable",
-                null, null, null
-            ))
+        every { responseSpec.bodyToMono(Void::class.java) } returns
+                Mono.error(
+                    WebClientResponseException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "Service unavailable",
+                        HttpHeaders.EMPTY, ByteArray(0), null
+                    )
+                )
 
         // When & Then - should complete successfully despite error
         StepVerifier.create(eventPublisherAdapter.publish(event))
             .verifyComplete()
 
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
             requestBodySpec.bodyValue(event)
         }
@@ -315,10 +322,10 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publishAll(events))
             .verifyComplete()
 
-        verify(exactly = 2) { 
+        verify(exactly = 2) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
         }
-        verify(exactly = 1) { 
+        verify(exactly = 1) {
             requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
         }
     }
@@ -332,7 +339,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publishAll(events))
             .verifyComplete()
 
-        verify(exactly = 0) { 
+        verify(exactly = 0) {
             webClient.post()
         }
     }
@@ -345,11 +352,13 @@ class EventPublisherAdapterTest {
         val events = listOf(event1, event2)
 
         every { responseSpec.bodyToMono(Void::class.java) } returnsMany listOf(
-            Mono.error(WebClientResponseException.create(
-                HttpStatus.SERVICE_UNAVAILABLE.value(),
-                "Service unavailable",
-                null, null, null
-            )),
+            Mono.error(
+                WebClientResponseException.create(
+                    HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    "Service unavailable",
+                    HttpHeaders.EMPTY, ByteArray(0), null
+                )
+            ),
             Mono.empty<Void>()
         )
 
@@ -357,7 +366,7 @@ class EventPublisherAdapterTest {
         StepVerifier.create(eventPublisherAdapter.publishAll(events))
             .verifyComplete()
 
-        verify(exactly = 2) { 
+        verify(exactly = 2) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
         }
     }
@@ -399,7 +408,7 @@ class EventPublisherAdapterTest {
         )
             .verifyComplete()
 
-        verify(exactly = 2) { 
+        verify(exactly = 2) {
             requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
         }
     }

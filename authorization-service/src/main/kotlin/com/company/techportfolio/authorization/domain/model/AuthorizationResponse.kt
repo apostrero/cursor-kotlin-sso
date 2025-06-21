@@ -2,15 +2,15 @@ package com.company.techportfolio.authorization.domain.model
 
 /**
  * Domain model representing the result of an authorization request.
- * 
+ *
  * This data class contains the outcome of an authorization decision, including
  * whether access is granted, user information, applicable permissions and roles,
  * and any error messages if authorization fails.
- * 
+ *
  * The response provides comprehensive information that can be used by calling
  * services to make informed decisions about resource access and to provide
  * meaningful feedback to users about their authorization status.
- * 
+ *
  * Example usage:
  * ```kotlin
  * val response = AuthorizationResponse.authorized(
@@ -21,7 +21,7 @@ package com.company.techportfolio.authorization.domain.model
  *     roles = listOf("PORTFOLIO_MANAGER")
  * )
  * ```
- * 
+ *
  * @property isAuthorized Whether the authorization request was granted
  * @property username The username that was evaluated for authorization
  * @property resource The resource that was being accessed (optional)
@@ -30,7 +30,7 @@ package com.company.techportfolio.authorization.domain.model
  * @property roles List of roles assigned to the user
  * @property organizationId The organization context for the authorization
  * @property errorMessage Error message if authorization failed
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -55,11 +55,11 @@ data class AuthorizationResponse(
     companion object {
         /**
          * Creates an authorized response with user permissions and roles.
-         * 
+         *
          * This factory method creates a successful authorization response
          * containing the user's permissions, roles, and other relevant
          * authorization context information.
-         * 
+         *
          * @param username The username that was authorized
          * @param resource The resource that was accessed (optional)
          * @param action The action that was performed (optional)
@@ -89,11 +89,11 @@ data class AuthorizationResponse(
 
         /**
          * Creates an unauthorized response with error information.
-         * 
+         *
          * This factory method creates a failed authorization response
          * with optional error message explaining why authorization
          * was denied.
-         * 
+         *
          * @param username The username that was denied authorization
          * @param resource The resource that was being accessed (optional)
          * @param action The action that was being performed (optional)

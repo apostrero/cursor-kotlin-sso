@@ -4,35 +4,32 @@ import com.company.techportfolio.authorization.domain.model.AuthorizationRequest
 import com.company.techportfolio.authorization.domain.model.AuthorizationResponse
 import com.company.techportfolio.authorization.domain.model.UserPermissions
 import com.company.techportfolio.authorization.domain.service.AuthorizationService
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.ninjasquad.springmockk.MockkBean
 import io.mockk.every
 import io.mockk.verify
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import com.ninjasquad.springmockk.MockkBean
+import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.MediaType
-import org.springframework.security.config.annotation.web.builders.HttpSecurity
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
-import org.springframework.security.web.SecurityFilterChain
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity
+import org.springframework.security.config.web.server.ServerHttpSecurity
+import org.springframework.security.web.server.SecurityWebFilterChain
 import org.springframework.test.context.ContextConfiguration
-import org.springframework.test.web.servlet.MockMvc
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.test.web.reactive.server.WebTestClient
 
 /**
- * Authorization Controller Test Suite - Web Layer Integration Tests
+ * Authorization Controller Test Suite - WebFlux Integration Tests
  *
  * This test class provides comprehensive integration testing for the AuthorizationController,
- * focusing on HTTP endpoint behavior, request/response handling, and proper integration
- * with the authorization service layer.
+ * focusing on reactive HTTP endpoint behavior, request/response handling, and proper integration
+ * with the authorization service layer using WebFlux testing patterns.
  *
  * ## Test Strategy:
- * - **Web Layer Testing**: Uses @WebMvcTest for lightweight web layer testing
+ * - **Web Layer Testing**: Uses @WebFluxTest for lightweight web layer testing
  * - **Service Mocking**: MockK integration for service layer mocking
- * - **HTTP Testing**: MockMvc for HTTP request/response testing
+ * - **HTTP Testing**: WebTestClient for HTTP request/response testing
  * - **JSON Validation**: Comprehensive JSON path assertions
  * - **Security Testing**: Custom security configuration for test isolation
  *
@@ -46,7 +43,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
  * ## Architecture:
  * - **Controller**: AuthorizationController (system under test)
  * - **Service**: AuthorizationService (mocked dependency)
- * - **Framework**: Spring Boot Test with MockMvc
+ * - **Framework**: Spring Boot Test with WebTestClient
  * - **Mocking**: MockK for Kotlin-friendly mocking
  *
  * ## Usage Example:
@@ -60,34 +57,28 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
  * @version 1.0
  * @since 1.0
  */
-@WebMvcTest(AuthorizationController::class)
+@WebFluxTest(AuthorizationController::class)
 @ContextConfiguration(classes = [AuthorizationController::class, AuthorizationControllerTest.TestSecurityConfig::class])
 class AuthorizationControllerTest {
 
     @Autowired
-    private lateinit var mockMvc: MockMvc
+    private lateinit var webTestClient: WebTestClient
 
     @MockkBean
     private lateinit var authorizationService: AuthorizationService
 
-    @Autowired
-    private lateinit var objectMapper: ObjectMapper
-
     /**
-     * Test Security Configuration
-     *
-     * Custom security configuration for test isolation that disables CSRF protection
-     * and permits all requests. This ensures tests focus on controller logic rather
-     * than security concerns.
+     * Test Security Configuration for WebFlux
      */
     @Configuration
-    @EnableWebSecurity
+    @EnableWebFluxSecurity
     class TestSecurityConfig {
         @Bean
-        fun filterChain(http: HttpSecurity): SecurityFilterChain {
-            http.csrf { it.disable() }
-                .authorizeHttpRequests { it.anyRequest().permitAll() }
-            return http.build()
+        fun springSecurityFilterChain(http: ServerHttpSecurity): SecurityWebFilterChain {
+            return http
+                .csrf { it.disable() }
+                .authorizeExchange { it.anyExchange().permitAll() }
+                .build()
         }
     }
 
@@ -130,19 +121,20 @@ class AuthorizationControllerTest {
         every { authorizationService.authorizeUser(any()) } returns response
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.isAuthorized").value(true))
-            .andExpect(jsonPath("$.username").value("testuser"))
-            .andExpect(jsonPath("$.resource").value("portfolio"))
-            .andExpect(jsonPath("$.action").value("read"))
-            .andExpect(jsonPath("$.permissions[0]").value("portfolio:read"))
-            .andExpect(jsonPath("$.roles[0]").value("USER"))
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.isAuthorized").isEqualTo(true)
+            .jsonPath("$.username").isEqualTo("testuser")
+            .jsonPath("$.resource").isEqualTo("portfolio")
+            .jsonPath("$.action").isEqualTo("read")
+            .jsonPath("$.permissions[0]").isEqualTo("portfolio:read")
+            .jsonPath("$.roles[0]").isEqualTo("USER")
 
         verify { authorizationService.authorizeUser(any()) }
     }
@@ -185,18 +177,19 @@ class AuthorizationControllerTest {
         every { authorizationService.authorizeUser(any()) } returns response
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isForbidden)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.isAuthorized").value(false))
-            .andExpect(jsonPath("$.username").value("testuser"))
-            .andExpect(jsonPath("$.resource").value("admin"))
-            .andExpect(jsonPath("$.action").value("delete"))
-            .andExpect(jsonPath("$.errorMessage").value("Access denied"))
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isForbidden
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.isAuthorized").isEqualTo(false)
+            .jsonPath("$.username").isEqualTo("testuser")
+            .jsonPath("$.resource").isEqualTo("admin")
+            .jsonPath("$.action").isEqualTo("delete")
+            .jsonPath("$.errorMessage").isEqualTo("Access denied")
 
         verify { authorizationService.authorizeUser(any()) }
     }
@@ -239,13 +232,14 @@ class AuthorizationControllerTest {
         every { authorizationService.authorizeUser(any()) } returns response
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.isAuthorized").value(true))
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody()
+            .jsonPath("$.isAuthorized").isEqualTo(true)
 
         verify { authorizationService.authorizeUser(any()) }
     }
@@ -278,26 +272,24 @@ class AuthorizationControllerTest {
             username = username,
             permissions = listOf("portfolio:read", "portfolio:write"),
             roles = listOf("USER", "PORTFOLIO_MANAGER"),
-            organizationId = 1L,
             isActive = true
         )
 
         every { authorizationService.getUserPermissions(username) } returns userPermissions
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/permissions")
-                .param("username", username)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.username").value(username))
-            .andExpect(jsonPath("$.permissions[0]").value("portfolio:read"))
-            .andExpect(jsonPath("$.permissions[1]").value("portfolio:write"))
-            .andExpect(jsonPath("$.roles[0]").value("USER"))
-            .andExpect(jsonPath("$.roles[1]").value("PORTFOLIO_MANAGER"))
-            .andExpect(jsonPath("$.organizationId").value(1))
-            .andExpect(jsonPath("$.isActive").value(true))
+        webTestClient.get()
+            .uri("/api/authorization/permissions?username={username}", username)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.username").isEqualTo(username)
+            .jsonPath("$.isActive").isEqualTo(true)
+            .jsonPath("$.permissions[0]").isEqualTo("portfolio:read")
+            .jsonPath("$.permissions[1]").isEqualTo("portfolio:write")
+            .jsonPath("$.roles[0]").isEqualTo("USER")
+            .jsonPath("$.roles[1]").isEqualTo("PORTFOLIO_MANAGER")
 
         verify { authorizationService.getUserPermissions(username) }
     }
@@ -335,15 +327,16 @@ class AuthorizationControllerTest {
         every { authorizationService.getUserPermissions(username) } returns userPermissions
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/permissions")
-                .param("username", username)
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value(username))
-            .andExpect(jsonPath("$.permissions").isEmpty)
-            .andExpect(jsonPath("$.roles").isEmpty)
-            .andExpect(jsonPath("$.isActive").value(false))
+        webTestClient.get()
+            .uri("/api/authorization/permissions?username={username}", username)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.username").isEqualTo(username)
+            .jsonPath("$.isActive").isEqualTo(false)
+            .jsonPath("$.permissions").isEmpty
+            .jsonPath("$.roles").isEmpty
 
         verify { authorizationService.getUserPermissions(username) }
     }
@@ -374,14 +367,12 @@ class AuthorizationControllerTest {
         every { authorizationService.hasRole(username, role) } returns true
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-role")
-                .param("username", username)
-                .param("role", role)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(content().string("true"))
+        webTestClient.get()
+            .uri("/api/authorization/has-role?username={username}&role={role}", username, role)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(true)
 
         verify { authorizationService.hasRole(username, role) }
     }
@@ -412,13 +403,12 @@ class AuthorizationControllerTest {
         every { authorizationService.hasRole(username, role) } returns false
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-role")
-                .param("username", username)
-                .param("role", role)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("false"))
+        webTestClient.get()
+            .uri("/api/authorization/has-role?username={username}&role={role}", username, role)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(false)
 
         verify { authorizationService.hasRole(username, role) }
     }
@@ -444,23 +434,23 @@ class AuthorizationControllerTest {
     @Test
     fun `should check if user has any of the specified roles`() {
         // Given
-        val requestBody = mapOf(
-            "username" to "testuser",
-            "roles" to listOf("ADMIN", "PORTFOLIO_MANAGER")
-        )
+        val username = "testuser"
+        val roles = listOf("ADMIN", "PORTFOLIO_MANAGER")
+        val request = mapOf("username" to username, "roles" to roles)
 
-        every { authorizationService.hasAnyRole(any(), any()) } returns true
+        every { authorizationService.hasAnyRole(username, roles) } returns true
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/has-any-role")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestBody))
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("true"))
+        webTestClient.post()
+            .uri("/api/authorization/has-any-role")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(true)
 
-        verify { authorizationService.hasAnyRole(any(), any()) }
+        verify { authorizationService.hasAnyRole(username, roles) }
     }
 
     /**
@@ -484,23 +474,23 @@ class AuthorizationControllerTest {
     @Test
     fun `should return false when user does not have any of the specified roles`() {
         // Given
-        val requestBody = mapOf(
-            "username" to "testuser",
-            "roles" to listOf("ADMIN", "SUPER_USER")
-        )
+        val username = "testuser"
+        val roles = listOf("ADMIN", "SUPER_USER")
+        val request = mapOf("username" to username, "roles" to roles)
 
-        every { authorizationService.hasAnyRole(any(), any()) } returns false
+        every { authorizationService.hasAnyRole(username, roles) } returns false
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/has-any-role")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(requestBody))
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("false"))
+        webTestClient.post()
+            .uri("/api/authorization/has-any-role")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(false)
 
-        verify { authorizationService.hasAnyRole(any(), any()) }
+        verify { authorizationService.hasAnyRole(username, roles) }
     }
 
     /**
@@ -532,14 +522,15 @@ class AuthorizationControllerTest {
         every { authorizationService.hasPermission(username, resource, action) } returns true
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-permission")
-                .param("username", username)
-                .param("resource", resource)
-                .param("action", action)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("true"))
+        webTestClient.get()
+            .uri(
+                "/api/authorization/has-permission?username={username}&resource={resource}&action={action}",
+                username, resource, action
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(true)
 
         verify { authorizationService.hasPermission(username, resource, action) }
     }
@@ -573,14 +564,15 @@ class AuthorizationControllerTest {
         every { authorizationService.hasPermission(username, resource, action) } returns false
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-permission")
-                .param("username", username)
-                .param("resource", resource)
-                .param("action", action)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("false"))
+        webTestClient.get()
+            .uri(
+                "/api/authorization/has-permission?username={username}&resource={resource}&action={action}",
+                username, resource, action
+            )
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(false)
 
         verify { authorizationService.hasPermission(username, resource, action) }
     }
@@ -605,11 +597,14 @@ class AuthorizationControllerTest {
     @Test
     fun `should return health status`() {
         // When & Then
-        mockMvc.perform(get("/api/authorization/health"))
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.status").value("UP"))
-            .andExpect(jsonPath("$.service").value("authorization"))
+        webTestClient.get()
+            .uri("/api/authorization/health")
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.status").isEqualTo("UP")
+            .jsonPath("$.service").isEqualTo("authorization")
     }
 
     /**
@@ -643,13 +638,14 @@ class AuthorizationControllerTest {
         every { authorizationService.getUserPermissions(username) } returns userPermissions
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/permissions")
-                .param("username", username)
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value(""))
-            .andExpect(jsonPath("$.isActive").value(false))
+        webTestClient.get()
+            .uri("/api/authorization/permissions?username={username}", username)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.username").isEqualTo("")
+            .jsonPath("$.isActive").isEqualTo(false)
 
         verify { authorizationService.getUserPermissions(username) }
     }
@@ -685,12 +681,13 @@ class AuthorizationControllerTest {
         every { authorizationService.getUserPermissions(username) } returns userPermissions
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/permissions")
-                .param("username", username)
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.username").value(username))
+        webTestClient.get()
+            .uri("/api/authorization/permissions?username={username}", username)
+            .exchange()
+            .expectStatus().isOk
+            .expectHeader().contentType(MediaType.APPLICATION_JSON)
+            .expectBody()
+            .jsonPath("$.username").isEqualTo(username)
 
         verify { authorizationService.getUserPermissions(username) }
     }
@@ -722,13 +719,12 @@ class AuthorizationControllerTest {
         every { authorizationService.hasRole(username, role) } returns true
 
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-role")
-                .param("username", username)
-                .param("role", role)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().string("true"))
+        webTestClient.get()
+            .uri("/api/authorization/has-role?username={username}&role={role}", username, role)
+            .exchange()
+            .expectStatus().isOk
+            .expectBody(Boolean::class.java)
+            .isEqualTo(true)
 
         verify { authorizationService.hasRole(username, role) }
     }
@@ -755,12 +751,12 @@ class AuthorizationControllerTest {
         val invalidJson = "{ invalid json }"
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(invalidJson)
-        )
-            .andExpect(status().isBadRequest)
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(invalidJson)
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -782,11 +778,10 @@ class AuthorizationControllerTest {
     @Test
     fun `should handle missing request body in authorization check`() {
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-        )
-            .andExpect(status().isBadRequest)
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -808,8 +803,10 @@ class AuthorizationControllerTest {
     @Test
     fun `should handle missing username parameter in permissions request`() {
         // When & Then
-        mockMvc.perform(get("/api/authorization/permissions"))
-            .andExpect(status().isBadRequest)
+        webTestClient.get()
+            .uri("/api/authorization/permissions")
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -831,11 +828,10 @@ class AuthorizationControllerTest {
     @Test
     fun `should handle missing role parameter in has-role request`() {
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-role")
-                .param("username", "testuser")
-        )
-            .andExpect(status().isBadRequest)
+        webTestClient.get()
+            .uri("/api/authorization/has-role?username={username}", "testuser")
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -857,11 +853,10 @@ class AuthorizationControllerTest {
     @Test
     fun `should handle missing username parameter in has-role request`() {
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-role")
-                .param("role", "USER")
-        )
-            .andExpect(status().isBadRequest)
+        webTestClient.get()
+            .uri("/api/authorization/has-role?role={role}", "USER")
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -884,12 +879,10 @@ class AuthorizationControllerTest {
     @Test
     fun `should handle missing parameters in has-permission request`() {
         // When & Then
-        mockMvc.perform(
-            get("/api/authorization/has-permission")
-                .param("username", "testuser")
-                .param("resource", "portfolio")
-        )
-            .andExpect(status().isBadRequest)
+        webTestClient.get()
+            .uri("/api/authorization/has-permission?username={username}&resource={resource}", "testuser", "portfolio")
+            .exchange()
+            .expectStatus().isBadRequest
     }
 
     /**
@@ -925,12 +918,12 @@ class AuthorizationControllerTest {
         every { authorizationService.authorizeUser(any()) } returns response
 
         // When & Then
-        mockMvc.perform(
-            post("/api/authorization/check")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request))
-        )
-            .andExpect(status().isOk)
+        webTestClient.post()
+            .uri("/api/authorization/check")
+            .contentType(MediaType.APPLICATION_JSON)
+            .bodyValue(request)
+            .exchange()
+            .expectStatus().isOk
 
         verify { authorizationService.authorizeUser(any()) }
     }

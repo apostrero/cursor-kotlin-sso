@@ -1,8 +1,8 @@
 package com.company.techportfolio.shared.domain.model
 
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
-import org.junit.jupiter.api.Assertions.*
 
 class EnumsTest {
 
@@ -46,7 +46,18 @@ class EnumsTest {
 
     @Test
     fun `TechnologyType should have all expected values`() {
-        val expectedValues = setOf("SOFTWARE", "HARDWARE", "INFRASTRUCTURE", "SERVICE", "PLATFORM", "TOOL", "FRAMEWORK", "LIBRARY", "DATABASE", "APPLICATION")
+        val expectedValues = setOf(
+            "SOFTWARE",
+            "HARDWARE",
+            "INFRASTRUCTURE",
+            "SERVICE",
+            "PLATFORM",
+            "TOOL",
+            "FRAMEWORK",
+            "LIBRARY",
+            "DATABASE",
+            "APPLICATION"
+        )
         val actualValues = TechnologyType.values().map { it.name }.toSet()
         assertEquals(expectedValues, actualValues)
     }
@@ -67,7 +78,18 @@ class EnumsTest {
 
     @Test
     fun `MaturityLevel should have all expected values`() {
-        val expectedValues = setOf("RESEARCH", "DEVELOPMENT", "TESTING", "PRODUCTION", "DEPRECATED", "EMERGING", "GROWING", "MATURE", "DECLINING", "LEGACY")
+        val expectedValues = setOf(
+            "RESEARCH",
+            "DEVELOPMENT",
+            "TESTING",
+            "PRODUCTION",
+            "DEPRECATED",
+            "EMERGING",
+            "GROWING",
+            "MATURE",
+            "DECLINING",
+            "LEGACY"
+        )
         val actualValues = MaturityLevel.values().map { it.name }.toSet()
         assertEquals(expectedValues, actualValues)
     }
@@ -103,7 +125,8 @@ class EnumsTest {
 
     @Test
     fun `AssessmentType should have all expected values`() {
-        val expectedValues = setOf("SECURITY", "PERFORMANCE", "COMPLIANCE", "COST", "TECHNICAL_DEBT", "VENDOR_EVALUATION")
+        val expectedValues =
+            setOf("SECURITY", "PERFORMANCE", "COMPLIANCE", "COST", "TECHNICAL_DEBT", "VENDOR_EVALUATION")
         val actualValues = AssessmentType.values().map { it.name }.toSet()
         assertEquals(expectedValues, actualValues)
     }
@@ -191,7 +214,7 @@ class EnumsTest {
         assertTrue(AssessmentStatus.values().isNotEmpty())
         assertTrue(DependencyType.values().isNotEmpty())
         assertTrue(DependencyStrength.values().isNotEmpty())
-        
+
         // Test ordinal progression
         PortfolioType.values().forEachIndexed { index, value ->
             assertEquals(index, value.ordinal)

@@ -1,16 +1,16 @@
 package com.company.techportfolio.gateway.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 /**
  * Unit test class for the TokenValidationResult domain model.
- * 
+ *
  * This test class verifies the behavior of the TokenValidationResult data class
  * which represents the outcome of JWT token validation operations in the system.
  * It tests all factory methods, constructors, expiration logic, and data class functionality.
- * 
+ *
  * Test coverage includes:
  * - Valid token validation result creation
  * - Invalid token validation result creation
@@ -20,14 +20,14 @@ import java.time.LocalDateTime
  * - Data class equality, hashCode, and toString
  * - Copy functionality for immutable updates
  * - Edge cases with null values and time boundaries
- * 
+ *
  * Testing approach:
  * - Tests all companion object factory methods
  * - Validates token expiration logic with time comparisons
  * - Verifies data class properties and behavior
  * - Tests edge cases and boundary conditions
  * - Ensures proper handling of temporal data
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -35,11 +35,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests valid token validation result creation using factory method.
-     * 
+     *
      * Verifies that the valid factory method creates a TokenValidationResult
      * with all required properties set correctly for successful token validation.
      * Also tests the automatic expiration detection based on current time.
-     * 
+     *
      * Expected behavior:
      * - Sets isValid to true
      * - Populates all token-related properties
@@ -78,11 +78,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests valid token validation result with expired token detection.
-     * 
+     *
      * Verifies that the valid factory method correctly detects token expiration
      * even when the token validation itself was successful. This tests the
      * automatic expiration logic based on the expiresAt timestamp.
-     * 
+     *
      * Expected behavior:
      * - Sets isValid to true (validation succeeded)
      * - Sets isExpired to true (token is past expiration)
@@ -116,10 +116,10 @@ class TokenValidationResultTest {
 
     /**
      * Tests invalid token validation result creation using factory method.
-     * 
+     *
      * Verifies that the invalid factory method creates a TokenValidationResult
      * with appropriate properties set for failed token validation scenarios.
-     * 
+     *
      * Expected behavior:
      * - Sets isValid to false
      * - Sets all token-related properties to null or empty
@@ -148,11 +148,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests expired token validation result creation using factory method.
-     * 
+     *
      * Verifies that the expired factory method creates a TokenValidationResult
      * specifically for tokens that are valid but have expired. This is different
      * from invalid tokens as the token structure and signature are valid.
-     * 
+     *
      * Expected behavior:
      * - Sets isValid to false (expired tokens are not valid for use)
      * - Sets isExpired to true
@@ -183,10 +183,10 @@ class TokenValidationResultTest {
 
     /**
      * Tests direct constructor usage with all parameters.
-     * 
+     *
      * Verifies that the primary constructor can be used directly to create
      * TokenValidationResult instances with custom parameter combinations.
-     * 
+     *
      * Expected behavior:
      * - Accepts all parameters directly
      * - Preserves all input values
@@ -230,10 +230,10 @@ class TokenValidationResultTest {
 
     /**
      * Tests constructor with default parameter values.
-     * 
+     *
      * Verifies that the constructor properly handles default values
      * when only required parameters are provided.
-     * 
+     *
      * Expected behavior:
      * - Uses default values for optional parameters
      * - Creates valid instance with minimal input
@@ -258,10 +258,10 @@ class TokenValidationResultTest {
 
     /**
      * Tests data class equality and hashCode implementation.
-     * 
+     *
      * Verifies that the data class properly implements equality comparison
      * and hashCode generation based on all properties, including temporal fields.
-     * 
+     *
      * Expected behavior:
      * - Equal objects have same property values
      * - Equal objects have same hashCode
@@ -297,10 +297,10 @@ class TokenValidationResultTest {
 
     /**
      * Tests toString implementation for debugging and logging.
-     * 
+     *
      * Verifies that the data class provides meaningful string representation
      * that includes key properties for debugging token validation issues.
-     * 
+     *
      * Expected behavior:
      * - Includes class name in string representation
      * - Shows key property values
@@ -329,11 +329,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests copy functionality for immutable updates.
-     * 
+     *
      * Verifies that the data class copy method allows creating modified
      * instances while preserving immutability principles. This is essential
      * for functional programming patterns and safe object manipulation.
-     * 
+     *
      * Expected behavior:
      * - Creates new instance with modified properties
      * - Preserves unchanged properties from original
@@ -365,11 +365,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests handling of null session index in valid token results.
-     * 
+     *
      * Verifies that valid token validation results can handle null session
      * indices without causing errors. This supports authentication flows
      * that don't use session-based tracking.
-     * 
+     *
      * Expected behavior:
      * - Accepts null session index without errors
      * - Creates valid token validation result
@@ -394,11 +394,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests handling of null session index in expired token results.
-     * 
+     *
      * Verifies that expired token validation results can handle null session
      * indices gracefully. This ensures consistency across different token
      * validation scenarios.
-     * 
+     *
      * Expected behavior:
      * - Accepts null session index for expired tokens
      * - Creates proper expired token result
@@ -422,11 +422,11 @@ class TokenValidationResultTest {
 
     /**
      * Tests handling of empty authorities list in token validation.
-     * 
+     *
      * Verifies that token validation results can handle users with no
      * authorities or roles. This supports scenarios where users may have
      * minimal permissions or guest access.
-     * 
+     *
      * Expected behavior:
      * - Accepts empty authorities list without errors
      * - Creates valid token validation result

@@ -1,20 +1,18 @@
 package com.company.techportfolio.portfolio.adapter.out.event
 
 import com.company.techportfolio.shared.domain.event.*
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Assertions.*
-import reactor.test.StepVerifier
-import reactor.core.publisher.Mono
+import org.junit.jupiter.api.Test
 import reactor.core.publisher.Flux
+import reactor.test.StepVerifier
 
 /**
  * Unit tests for Reactive EventPublisherAdapter.
- * 
+ *
  * This test class verifies the functionality of the reactive EventPublisherAdapter, which
  * is the implementation of the EventPublisher port in the hexagonal architecture.
  * It tests the adapter's ability to publish various domain events using reactive patterns.
- * 
+ *
  * ## Test Coverage:
  * - Publishing of portfolio-related events (created, updated)
  * - Publishing of technology-related events (added, removed)
@@ -22,13 +20,13 @@ import reactor.core.publisher.Flux
  * - Batch event publishing with Flux
  * - Reactive error handling
  * - Empty event list handling
- * 
+ *
  * ## Testing Approach:
  * - Uses StepVerifier for reactive testing
  * - Verifies Mono<Void> completion without errors
  * - Tests reactive composition and error handling
  * - Validates reactive stream behavior
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see EventPublisherAdapter
@@ -43,7 +41,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Set up the test environment before each test.
-     * 
+     *
      * Initializes a fresh instance of the EventPublisherAdapter
      * for each test to ensure test isolation.
      */
@@ -54,7 +52,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests publishing a PortfolioCreatedEvent reactively.
-     * 
+     *
      * Verifies that:
      * 1. The adapter can accept and process a PortfolioCreatedEvent
      * 2. The Mono<Void> completes successfully
@@ -77,7 +75,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests publishing a PortfolioUpdatedEvent reactively.
-     * 
+     *
      * Verifies that:
      * 1. The adapter can accept and process a PortfolioUpdatedEvent
      * 2. The Mono<Void> completes successfully
@@ -98,7 +96,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests publishing a TechnologyAddedEvent reactively.
-     * 
+     *
      * Verifies that:
      * 1. The adapter can accept and process a TechnologyAddedEvent
      * 2. The Mono<Void> completes successfully
@@ -120,7 +118,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests publishing a TechnologyRemovedEvent reactively.
-     * 
+     *
      * Verifies that:
      * 1. The adapter can accept and process a TechnologyRemovedEvent
      * 2. The Mono<Void> completes successfully
@@ -142,7 +140,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests publishing multiple events reactively using publishAll.
-     * 
+     *
      * Verifies that:
      * 1. The adapter can handle batch publishing of multiple events
      * 2. The Mono<Void> completes successfully
@@ -164,7 +162,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests handling of empty events list reactively.
-     * 
+     *
      * Verifies that:
      * 1. The adapter handles empty event lists gracefully
      * 2. The Mono<Void> completes successfully
@@ -182,7 +180,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests reactive composition of multiple event publications.
-     * 
+     *
      * Verifies that:
      * 1. Multiple sequential event publications work correctly
      * 2. Reactive composition with flatMap works as expected
@@ -206,7 +204,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests reactive error handling.
-     * 
+     *
      * Verifies that:
      * 1. The adapter handles errors gracefully
      * 2. Errors are logged but don't fail the operation
@@ -229,7 +227,7 @@ class EventPublisherAdapterTest {
 
     /**
      * Tests reactive stream behavior with Flux.
-     * 
+     *
      * Verifies that:
      * 1. The adapter works correctly with reactive streams
      * 2. Flux operations work as expected

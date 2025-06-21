@@ -188,6 +188,123 @@ logging:
     org.springframework.security: DEBUG
 ```
 
+## Testing
+
+### Unit and Integration Tests
+
+```bash
+# Run all tests (excluding load tests)
+./gradlew test
+
+# Run tests with coverage report
+./gradlew test jacocoTestReport
+
+# Run specific test categories
+./gradlew test --tests "*ControllerTest*"
+./gradlew test --tests "*ServiceTest*"
+./gradlew test --tests "*IntegrationTest*"
+```
+
+### Load and Performance Testing
+
+The service includes comprehensive load testing capabilities to ensure performance under production-like conditions.
+
+#### Quick Load Test (Development Mode)
+
+```bash
+# Run load tests in development mode (reduced parameters)
+./gradlew test --tests "*ReactiveLoadTest*"
+```
+
+This runs abbreviated load tests suitable for CI/development:
+- 20 concurrent users (vs 200 in full mode)
+- 2 requests per user (vs 10 in full mode)  
+- 5-second test duration (vs 30 seconds in full mode)
+- 100 portfolios for memory tests (vs 10,000 in full mode)
+
+#### Full Load Testing (Production Scale)
+
+```bash
+# Enable full-scale load testing
+./gradlew test --tests "*ReactiveLoadTest*" -Drun.load.tests=true
+
+# Run with detailed logging
+./gradlew test --tests "*ReactiveLoadTest*" -Drun.load.tests=true --info
+```
+
+#### Load Test Scenarios
+
+**High Concurrent User Load**
+- Simulates 200 concurrent users
+- Each user makes 10 API requests
+- Tests system responsiveness under high load
+- Measures response times and success rates
+
+**Sustained Traffic Patterns**  
+- 30-second sustained load
+- 50 requests per second
+- Tests system stability over time
+- Monitors for performance degradation
+
+**Burst Traffic Handling**
+- Sudden bursts of 500 concurrent requests
+- Multiple burst cycles with recovery periods
+- Tests backpressure and overflow handling
+- Measures system recovery characteristics
+
+**Memory Pressure Scenarios**
+- Creates 10,000 test portfolios
+- Performs memory-intensive streaming operations
+- Tests garbage collection and memory management
+- Monitors for memory leaks
+
+**Database Connection Pool Stress**
+- 100 concurrent database connections
+- Mix of read and write operations
+- Tests connection pool behavior
+- Monitors connection acquisition times
+
+#### Performance Metrics
+
+Load tests provide comprehensive metrics:
+
+```
+Load Test Results:
+Total requests: 2000
+Total time: 15432ms
+Throughput: 129.6 requests/second
+Success rate: 99.85%
+Average response time: 234ms
+95th percentile: 456ms
+99th percentile: 789ms
+Error count: 3
+
+Memory Pressure Test Results:
+Initial memory: 256MB
+Final memory: 312MB
+Memory increase: 56MB
+Success rate: 98.5%
+Average response time: 445ms
+```
+
+#### Test Configuration
+
+Load tests are configured to prevent long build times:
+- **Disabled by default**: Use `@Disabled` annotation
+- **Build exclusion**: Excluded in `build.gradle.kts` 
+- **Timeout protection**: All operations have proper timeouts
+- **Resource cleanup**: Proper thread pool and connection management
+
+#### Continuous Integration
+
+For CI environments, load tests run in abbreviated mode:
+- Shorter durations
+- Fewer concurrent users
+- Reduced dataset sizes
+- Faster feedback cycles
+
+⚠️ **Important**: Full load tests can take 5-10 minutes to complete and require significant system resources.
+
 ## Database Schema
 
 ### Technology Portfolios Table
