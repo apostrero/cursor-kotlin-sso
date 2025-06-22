@@ -1,30 +1,30 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence.entity
 
-import com.company.techportfolio.shared.domain.model.PortfolioType
 import com.company.techportfolio.shared.domain.model.PortfolioStatus
-import org.junit.jupiter.api.Test
+import com.company.techportfolio.shared.domain.model.PortfolioType
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 /**
  * Unit tests for PortfolioEntity.
- * 
+ *
  * This test class verifies the functionality of the PortfolioEntity class, which
  * is the JPA entity representation of a technology portfolio in the persistence layer.
  * It tests the entity's construction, property initialization, and default values.
- * 
+ *
  * ## Test Coverage:
  * - Entity construction with all parameters
  * - Entity construction with minimal required parameters
  * - Default value initialization
  * - Support for all portfolio types
  * - Support for all portfolio statuses
- * 
+ *
  * ## Testing Approach:
  * - Direct instantiation of entities with various parameter combinations
  * - Verification of property values after construction
  * - Verification of default values for optional parameters
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see PortfolioEntity
@@ -40,7 +40,7 @@ class PortfolioEntityTest {
 
     /**
      * Tests entity construction with all parameters provided.
-     * 
+     *
      * Verifies that:
      * 1. All properties are correctly initialized with the provided values
      * 2. No default values are used when explicit values are provided
@@ -77,7 +77,7 @@ class PortfolioEntityTest {
 
     /**
      * Tests entity construction with only required parameters.
-     * 
+     *
      * Verifies that:
      * 1. Required properties are correctly initialized with the provided values
      * 2. Optional properties are initialized with null or default values
@@ -109,7 +109,7 @@ class PortfolioEntityTest {
 
     /**
      * Tests entity construction with all possible portfolio types.
-     * 
+     *
      * Verifies that:
      * 1. The entity can be constructed with each enum value from PortfolioType
      * 2. The type property is correctly set to the provided enum value
@@ -140,7 +140,7 @@ class PortfolioEntityTest {
 
     /**
      * Tests entity construction with all possible portfolio statuses.
-     * 
+     *
      * Verifies that:
      * 1. The entity can be constructed with each enum value from PortfolioStatus
      * 2. The status property is correctly set to the provided enum value

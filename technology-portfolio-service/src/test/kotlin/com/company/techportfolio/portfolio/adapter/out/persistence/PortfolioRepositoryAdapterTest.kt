@@ -1,27 +1,31 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence
 
-import com.company.techportfolio.portfolio.adapter.out.persistence.repository.PortfolioJpaRepository
-import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
 import com.company.techportfolio.portfolio.adapter.out.persistence.entity.PortfolioEntity
 import com.company.techportfolio.portfolio.adapter.out.persistence.entity.TechnologyEntity
+import com.company.techportfolio.portfolio.adapter.out.persistence.repository.PortfolioJpaRepository
+import com.company.techportfolio.portfolio.adapter.out.persistence.repository.TechnologyJpaRepository
 import com.company.techportfolio.shared.domain.model.*
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import java.util.*
 
 /**
  * Unit tests for PortfolioRepositoryAdapter.
- * 
+ *
  * This test class verifies the functionality of the PortfolioRepositoryAdapter, which
  * is the implementation of the PortfolioRepository and PortfolioQueryRepository interfaces
  * in the hexagonal architecture. It tests the adapter's ability to correctly translate
- * between domain models and JPA entities, and to delegate operations to the underlying
- * Spring Data JPA repositories.
- * 
+ * between domain models and R2DBC entities, and to delegate operations to the underlying
+ * Spring Data R2DBC repositories.
+ *
  * ## Test Coverage:
  * - Basic CRUD operations (find, save, update, delete)
  * - Query operations by various criteria
@@ -29,12 +33,13 @@ import java.util.*
  * - Error handling and edge cases
  * - Domain model to entity mapping
  * - Entity to domain model mapping
- * 
+ *
  * ## Testing Approach:
- * - Uses MockK for mocking JPA repositories
+ * - Uses MockK for mocking R2DBC repositories
+ * - Uses StepVerifier for testing reactive streams
  * - Follows the Given-When-Then pattern for test clarity
  * - Verifies both return values and repository interactions
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see PortfolioRepositoryAdapter
@@ -44,12 +49,12 @@ import java.util.*
 class PortfolioRepositoryAdapterTest {
 
     /**
-     * Mock of the Spring Data JPA repository for portfolio entities.
+     * Mock of the Spring Data R2DBC repository for portfolio entities.
      */
     private val portfolioJpaRepository = mockk<PortfolioJpaRepository>()
-    
+
     /**
-     * Mock of the Spring Data JPA repository for technology entities.
+     * Mock of the Spring Data R2DBC repository for technology entities.
      */
     private val technologyJpaRepository = mockk<TechnologyJpaRepository>()
 
@@ -65,7 +70,7 @@ class PortfolioRepositoryAdapterTest {
 
     /**
      * Set up the test environment before each test.
-     * 
+     *
      * Initializes a fresh instance of the PortfolioRepositoryAdapter with mock
      * dependencies for each test to ensure test isolation.
      */
@@ -80,9 +85,9 @@ class PortfolioRepositoryAdapterTest {
 
     /**
      * Tests that findById returns a correctly mapped domain model when a portfolio exists.
-     * 
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entity is properly mapped to a domain model
      * 3. All properties are correctly transferred during mapping
      */
@@ -91,47 +96,52 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val portfolioId = 1L
         val entity = createTestPortfolioEntity(portfolioId, "Test Portfolio")
-        every { portfolioJpaRepository.findById(portfolioId) } returns Optional.of(entity)
+        every { portfolioJpaRepository.findById(portfolioId) } returns Mono.just(entity)
 
         // When
         val result = portfolioRepositoryAdapter.findById(portfolioId)
 
         // Then
-        assertNotNull(result)
-        assertEquals(portfolioId, result!!.id)
-        assertEquals("Test Portfolio", result.name)
-        assertEquals(PortfolioType.ENTERPRISE, result.type)
-        assertEquals(PortfolioStatus.ACTIVE, result.status)
+        StepVerifier.create(result)
+            .expectNextMatches { portfolio ->
+                portfolio.id == portfolioId &&
+                        portfolio.name == "Test Portfolio" &&
+                        portfolio.type == PortfolioType.ENTERPRISE &&
+                        portfolio.status == PortfolioStatus.ACTIVE
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findById(portfolioId) }
     }
 
     /**
-     * Tests that findById returns null when a portfolio does not exist.
-     * 
+     * Tests that findById returns empty Mono when a portfolio does not exist.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
-     * 2. The adapter returns null when the repository returns an empty Optional
+     * 1. The adapter correctly delegates to the R2DBC repository
+     * 2. The adapter returns empty Mono when the repository returns empty Mono
      */
     @Test
-    fun `findById should return null when not found`() {
+    fun `findById should return empty when not found`() {
         // Given
         val portfolioId = 999L
-        every { portfolioJpaRepository.findById(portfolioId) } returns Optional.empty()
+        every { portfolioJpaRepository.findById(portfolioId) } returns Mono.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findById(portfolioId)
 
         // Then
-        assertNull(result)
+        StepVerifier.create(result)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findById(portfolioId) }
     }
 
     /**
      * Tests that findByName returns a correctly mapped domain model when a portfolio exists.
-     * 
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entity is properly mapped to a domain model
      * 3. The name property matches the search criteria
      */
@@ -140,43 +150,47 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val name = "Test Portfolio"
         val entity = createTestPortfolioEntity(1L, name)
-        every { portfolioJpaRepository.findByName(name) } returns entity
+        every { portfolioJpaRepository.findByName(name) } returns Mono.just(entity)
 
         // When
         val result = portfolioRepositoryAdapter.findByName(name)
 
         // Then
-        assertNotNull(result)
-        assertEquals(name, result!!.name)
+        StepVerifier.create(result)
+            .expectNextMatches { portfolio -> portfolio.name == name }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByName(name) }
     }
 
     /**
-     * Tests that findByName returns null when a portfolio does not exist.
-     * 
+     * Tests that findByName returns empty Mono when a portfolio does not exist.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
-     * 2. The adapter returns null when the repository returns null
+     * 1. The adapter correctly delegates to the R2DBC repository
+     * 2. The adapter returns empty Mono when the repository returns empty Mono
      */
     @Test
-    fun `findByName should return null when not found`() {
+    fun `findByName should return empty when not found`() {
         // Given
         val name = "Non-existent Portfolio"
-        every { portfolioJpaRepository.findByName(name) } returns null
+        every { portfolioJpaRepository.findByName(name) } returns Mono.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findByName(name)
 
         // Then
-        assertNull(result)
+        StepVerifier.create(result)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByName(name) }
     }
 
     /**
-     * Tests that findByOwnerId returns a list of correctly mapped domain models.
-     * 
+     * Tests that findByOwnerId returns a Flux of correctly mapped domain models.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entities are properly mapped to domain models
      * 3. The correct number of portfolios is returned
      */
@@ -188,47 +202,51 @@ class PortfolioRepositoryAdapterTest {
             createTestPortfolioEntity(1L, "Portfolio 1"),
             createTestPortfolioEntity(2L, "Portfolio 2")
         )
-        every { portfolioJpaRepository.findByOwnerId(ownerId) } returns entities
+        every { portfolioJpaRepository.findByOwnerId(ownerId) } returns Flux.fromIterable(entities)
 
         // When
         val result = portfolioRepositoryAdapter.findByOwnerId(ownerId)
 
         // Then
-        assertEquals(2, result.size)
-        assertEquals("Portfolio 1", result[0].name)
-        assertEquals("Portfolio 2", result[1].name)
+        StepVerifier.create(result)
+            .expectNextMatches { it.name == "Portfolio 1" }
+            .expectNextMatches { it.name == "Portfolio 2" }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByOwnerId(ownerId) }
     }
 
     /**
-     * Tests that findByOrganizationId returns a list of correctly mapped domain models.
-     * 
+     * Tests that findByOrganizationId returns a Flux of correctly mapped domain models.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entities are properly mapped to domain models
-     * 3. The correct number of portfolios is returned
+     * 3. The organizationId property matches the search criteria
      */
     @Test
     fun `findByOrganizationId should return organization portfolios`() {
         // Given
         val organizationId = 200L
         val entities = listOf(createTestPortfolioEntity(1L, "Org Portfolio"))
-        every { portfolioJpaRepository.findByOrganizationId(organizationId) } returns entities
+        every { portfolioJpaRepository.findByOrganizationId(organizationId) } returns Flux.fromIterable(entities)
 
         // When
         val result = portfolioRepositoryAdapter.findByOrganizationId(organizationId)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals("Org Portfolio", result[0].name)
+        StepVerifier.create(result)
+            .expectNextMatches { it.name == "Org Portfolio" }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByOrganizationId(organizationId) }
     }
 
     /**
-     * Tests that findByType returns a list of correctly mapped domain models.
-     * 
+     * Tests that findByType returns portfolios of specified type.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entities are properly mapped to domain models
      * 3. The type property matches the search criteria
      */
@@ -237,22 +255,24 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val type = PortfolioType.ENTERPRISE
         val entities = listOf(createTestPortfolioEntity(1L, "Enterprise Portfolio"))
-        every { portfolioJpaRepository.findByType(type) } returns entities
+        every { portfolioJpaRepository.findByType(type) } returns Flux.fromIterable(entities)
 
         // When
         val result = portfolioRepositoryAdapter.findByType(type)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals(type, result[0].type)
+        StepVerifier.create(result)
+            .expectNextMatches { it.type == type }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByType(type) }
     }
 
     /**
-     * Tests that findByStatus returns a list of correctly mapped domain models.
-     * 
+     * Tests that findByStatus returns portfolios with specified status.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The returned entities are properly mapped to domain models
      * 3. The status property matches the search criteria
      */
@@ -261,22 +281,24 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val status = PortfolioStatus.ACTIVE
         val entities = listOf(createTestPortfolioEntity(1L, "Active Portfolio"))
-        every { portfolioJpaRepository.findByStatus(status) } returns entities
+        every { portfolioJpaRepository.findByStatus(status) } returns Flux.fromIterable(entities)
 
         // When
         val result = portfolioRepositoryAdapter.findByStatus(status)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals(status, result[0].status)
+        StepVerifier.create(result)
+            .expectNextMatches { it.status == status }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByStatus(status) }
     }
 
     /**
-     * Tests that findAll returns a list of all active portfolios.
-     * 
+     * Tests that findAll returns all active portfolios.
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository's findByIsActiveTrue method
+     * 1. The adapter correctly delegates to the R2DBC repository's findByIsActiveTrue method
      * 2. The returned entities are properly mapped to domain models
      * 3. The correct number of portfolios is returned
      */
@@ -287,21 +309,24 @@ class PortfolioRepositoryAdapterTest {
             createTestPortfolioEntity(1L, "Portfolio 1"),
             createTestPortfolioEntity(2L, "Portfolio 2")
         )
-        every { portfolioJpaRepository.findByIsActiveTrue() } returns entities
+        every { portfolioJpaRepository.findByIsActiveTrue() } returns Flux.fromIterable(entities)
 
         // When
         val result = portfolioRepositoryAdapter.findAll()
 
         // Then
-        assertEquals(2, result.size)
+        StepVerifier.create(result)
+            .expectNextCount(2)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findByIsActiveTrue() }
     }
 
     /**
      * Tests that save correctly persists a new portfolio.
-     * 
+     *
      * Verifies that:
-     * 1. The adapter correctly delegates to the JPA repository
+     * 1. The adapter correctly delegates to the R2DBC repository
      * 2. The domain model is properly mapped to an entity before saving
      * 3. The saved entity is properly mapped back to a domain model
      * 4. The returned domain model includes the generated ID
@@ -311,15 +336,18 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val portfolio = createTestTechnologyPortfolio(null, "New Portfolio")
         val savedEntity = createTestPortfolioEntity(1L, "New Portfolio")
-        every { portfolioJpaRepository.save(any()) } returns savedEntity
+        every { portfolioJpaRepository.save(any()) } returns Mono.just(savedEntity)
 
         // When
         val result = portfolioRepositoryAdapter.save(portfolio)
 
         // Then
-        assertNotNull(result)
-        assertEquals(1L, result.id)
-        assertEquals("New Portfolio", result.name)
+        StepVerifier.create(result)
+            .expectNextMatches { saved ->
+                saved.id == 1L && saved.name == "New Portfolio"
+            }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.save(any()) }
     }
 
@@ -328,15 +356,18 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val portfolio = createTestTechnologyPortfolio(1L, "Updated Portfolio")
         val updatedEntity = createTestPortfolioEntity(1L, "Updated Portfolio")
-        every { portfolioJpaRepository.save(any()) } returns updatedEntity
+        every { portfolioJpaRepository.save(any()) } returns Mono.just(updatedEntity)
 
         // When
         val result = portfolioRepositoryAdapter.update(portfolio)
 
         // Then
-        assertNotNull(result)
-        assertEquals(1L, result.id)
-        assertEquals("Updated Portfolio", result.name)
+        StepVerifier.create(result)
+            .expectNextMatches { updated ->
+                updated.id == 1L && updated.name == "Updated Portfolio"
+            }
+            .verifyComplete()
+
         verify { portfolioJpaRepository.save(any()) }
     }
 
@@ -344,41 +375,72 @@ class PortfolioRepositoryAdapterTest {
     fun `delete should delete portfolio successfully`() {
         // Given
         val portfolioId = 1L
-        every { portfolioJpaRepository.deleteById(portfolioId) } just Runs
+        every { portfolioJpaRepository.existsById(portfolioId) } returns Mono.just(true)
+        every { portfolioJpaRepository.deleteById(eq(portfolioId)) } returns Mono.empty()
 
         // When
         val result = portfolioRepositoryAdapter.delete(portfolioId)
 
         // Then
-        assertTrue(result)
-        verify { portfolioJpaRepository.deleteById(portfolioId) }
+        StepVerifier.create(result)
+            .expectNext(true)
+            .verifyComplete()
+
+        verify { portfolioJpaRepository.existsById(portfolioId) }
+        verify { portfolioJpaRepository.deleteById(eq(portfolioId)) }
     }
 
     @Test
     fun `delete should return false when deletion fails`() {
         // Given
         val portfolioId = 1L
-        every { portfolioJpaRepository.deleteById(portfolioId) } throws RuntimeException("Delete failed")
+        every { portfolioJpaRepository.existsById(portfolioId) } returns Mono.just(true)
+        every { portfolioJpaRepository.deleteById(eq(portfolioId)) } returns Mono.error(RuntimeException("Delete failed"))
 
         // When
         val result = portfolioRepositoryAdapter.delete(portfolioId)
 
         // Then
-        assertFalse(result)
-        verify { portfolioJpaRepository.deleteById(portfolioId) }
+        StepVerifier.create(result)
+            .expectNext(false)
+            .verifyComplete()
+
+        verify { portfolioJpaRepository.existsById(portfolioId) }
+        verify { portfolioJpaRepository.deleteById(eq(portfolioId)) }
+    }
+
+    @Test
+    fun `delete should return false when portfolio does not exist`() {
+        // Given
+        val portfolioId = 999L
+        every { portfolioJpaRepository.existsById(portfolioId) } returns Mono.just(false)
+
+        // When
+        val result = portfolioRepositoryAdapter.delete(portfolioId)
+
+        // Then
+        StepVerifier.create(result)
+            .expectNext(false)
+            .verifyComplete()
+
+        verify { portfolioJpaRepository.existsById(portfolioId) }
+        // deleteById should not be called when portfolio doesn't exist
     }
 
     @Test
     fun `existsById should return true when portfolio exists`() {
         // Given
         val portfolioId = 1L
-        every { portfolioJpaRepository.existsById(portfolioId) } returns true
+        every { portfolioJpaRepository.existsById(portfolioId) } returns Mono.just(true)
 
         // When
         val result = portfolioRepositoryAdapter.existsById(portfolioId)
 
         // Then
-        assertTrue(result)
+        StepVerifier.create(result)
+            .expectNext(true)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.existsById(portfolioId) }
     }
 
@@ -386,13 +448,16 @@ class PortfolioRepositoryAdapterTest {
     fun `existsById should return false when portfolio does not exist`() {
         // Given
         val portfolioId = 999L
-        every { portfolioJpaRepository.existsById(portfolioId) } returns false
+        every { portfolioJpaRepository.existsById(portfolioId) } returns Mono.just(false)
 
         // When
         val result = portfolioRepositoryAdapter.existsById(portfolioId)
 
         // Then
-        assertFalse(result)
+        StepVerifier.create(result)
+            .expectNext(false)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.existsById(portfolioId) }
     }
 
@@ -401,13 +466,16 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val ownerId = 123L
         val count = 5L
-        every { portfolioJpaRepository.countByOwnerId(ownerId) } returns count
+        every { portfolioJpaRepository.countByOwnerId(ownerId) } returns Mono.just(count)
 
         // When
         val result = portfolioRepositoryAdapter.countByOwnerId(ownerId)
 
         // Then
-        assertEquals(count, result)
+        StepVerifier.create(result)
+            .expectNext(count)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.countByOwnerId(ownerId) }
     }
 
@@ -416,13 +484,16 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val organizationId = 200L
         val count = 3L
-        every { portfolioJpaRepository.countByOrganizationId(organizationId) } returns count
+        every { portfolioJpaRepository.countByOrganizationId(organizationId) } returns Mono.just(count)
 
         // When
         val result = portfolioRepositoryAdapter.countByOrganizationId(organizationId)
 
         // Then
-        assertEquals(count, result)
+        StepVerifier.create(result)
+            .expectNext(count)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.countByOrganizationId(organizationId) }
     }
 
@@ -438,19 +509,22 @@ class PortfolioRepositoryAdapterTest {
             createTestTechnologyEntity(3L, "Tech 3", null)
         )
 
-        every { portfolioJpaRepository.findById(portfolioId) } returns Optional.of(entity)
-        every { technologyJpaRepository.countByPortfolioId(portfolioId) } returns technologyCount
-        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns technologies
+        every { portfolioJpaRepository.findById(portfolioId) } returns Mono.just(entity)
+        every { technologyJpaRepository.countByPortfolioId(portfolioId) } returns Mono.just(technologyCount)
+        every { technologyJpaRepository.findByPortfolioId(portfolioId) } returns Flux.fromIterable(technologies)
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummary(portfolioId)
 
         // Then
-        assertNotNull(result)
-        assertEquals(portfolioId, result!!.id)
-        assertEquals("Test Portfolio", result.name)
-        assertEquals(3, result.technologyCount)
-        assertEquals(BigDecimal("3000.00"), result.totalAnnualCost)
+        StepVerifier.create(result)
+            .expectNextMatches { summary ->
+                summary.id == portfolioId &&
+                        summary.name == "Test Portfolio" &&
+                        summary.technologyCount == technologyCount.toInt() &&
+                        summary.totalAnnualCost == BigDecimal("3000.00")
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findById(portfolioId) }
         verify { technologyJpaRepository.countByPortfolioId(portfolioId) }
@@ -461,13 +535,15 @@ class PortfolioRepositoryAdapterTest {
     fun `findPortfolioSummary should return null when portfolio not found`() {
         // Given
         val portfolioId = 999L
-        every { portfolioJpaRepository.findById(portfolioId) } returns Optional.empty()
+        every { portfolioJpaRepository.findById(portfolioId) } returns Mono.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummary(portfolioId)
 
         // Then
-        assertNull(result)
+        StepVerifier.create(result)
+            .verifyComplete()
+
         verify { portfolioJpaRepository.findById(portfolioId) }
     }
 
@@ -476,17 +552,21 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val ownerId = 123L
         val entities = listOf(createTestPortfolioEntity(1L, "Portfolio 1"))
-        every { portfolioJpaRepository.findByOwnerId(ownerId) } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 2L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
+        every { portfolioJpaRepository.findByOwnerId(ownerId) } returns Flux.fromIterable(entities)
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(2L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummariesByOwner(ownerId)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals("Portfolio 1", result[0].name)
-        assertEquals(2, result[0].technologyCount)
+        StepVerifier.create(result)
+            .expectNextMatches { summary ->
+                summary.id == 1L &&
+                        summary.name == "Portfolio 1" &&
+                        summary.technologyCount == 2
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findByOwnerId(ownerId) }
         verify { technologyJpaRepository.countByPortfolioId(1L) }
@@ -498,16 +578,20 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val organizationId = 200L
         val entities = listOf(createTestPortfolioEntity(1L, "Org Portfolio"))
-        every { portfolioJpaRepository.findByOrganizationId(organizationId) } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 1L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
+        every { portfolioJpaRepository.findByOrganizationId(organizationId) } returns Flux.fromIterable(entities)
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(1L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummariesByOrganization(organizationId)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals("Org Portfolio", result[0].name)
+        StepVerifier.create(result)
+            .expectNextMatches { summary ->
+                summary.id == 1L &&
+                        summary.name == "Org Portfolio"
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findByOrganizationId(organizationId) }
         verify { technologyJpaRepository.countByPortfolioId(1L) }
@@ -519,16 +603,20 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val type = PortfolioType.ENTERPRISE
         val entities = listOf(createTestPortfolioEntity(1L, "Enterprise Portfolio"))
-        every { portfolioJpaRepository.findByType(type) } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 0L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
+        every { portfolioJpaRepository.findByType(type) } returns Flux.fromIterable(entities)
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(0L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummariesByType(type)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals(type, result[0].type)
+        StepVerifier.create(result)
+            .expectNextMatches { summary ->
+                summary.id == 1L &&
+                        summary.type == type
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findByType(type) }
         verify { technologyJpaRepository.countByPortfolioId(1L) }
@@ -540,16 +628,20 @@ class PortfolioRepositoryAdapterTest {
         // Given
         val status = PortfolioStatus.ACTIVE
         val entities = listOf(createTestPortfolioEntity(1L, "Active Portfolio"))
-        every { portfolioJpaRepository.findByStatus(status) } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 0L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
+        every { portfolioJpaRepository.findByStatus(status) } returns Flux.fromIterable(entities)
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(0L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findPortfolioSummariesByStatus(status)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals(status, result[0].status)
+        StepVerifier.create(result)
+            .expectNextMatches { summary ->
+                summary.id == 1L &&
+                        summary.status == status
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findByStatus(status) }
         verify { technologyJpaRepository.countByPortfolioId(1L) }
@@ -563,17 +655,19 @@ class PortfolioRepositoryAdapterTest {
             createTestPortfolioEntity(1L, "Portfolio 1"),
             createTestPortfolioEntity(2L, "Portfolio 2")
         )
-        every { portfolioJpaRepository.findByIsActiveTrue() } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 1L
-        every { technologyJpaRepository.countByPortfolioId(2L) } returns 2L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
-        every { technologyJpaRepository.findByPortfolioId(2L) } returns emptyList()
+        every { portfolioJpaRepository.findByIsActiveTrue() } returns Flux.fromIterable(entities)
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(1L)
+        every { technologyJpaRepository.countByPortfolioId(2L) } returns Mono.just(2L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
+        every { technologyJpaRepository.findByPortfolioId(2L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.findAllPortfolioSummaries()
 
         // Then
-        assertEquals(2, result.size)
+        StepVerifier.create(result)
+            .expectNextCount(2)
+            .verifyComplete()
 
         verify { portfolioJpaRepository.findByIsActiveTrue() }
         verify { technologyJpaRepository.countByPortfolioId(1L) }
@@ -590,17 +684,22 @@ class PortfolioRepositoryAdapterTest {
         val status = PortfolioStatus.ACTIVE
         val organizationId = 200L
         val entities = listOf(createTestPortfolioEntity(1L, "Enterprise Portfolio"))
-        
-        every { portfolioJpaRepository.searchPortfolios(name, type, status, organizationId) } returns entities
-        every { technologyJpaRepository.countByPortfolioId(1L) } returns 0L
-        every { technologyJpaRepository.findByPortfolioId(1L) } returns emptyList()
+
+        every { portfolioJpaRepository.searchPortfolios(name, type, status, organizationId) } returns Flux.fromIterable(
+            entities
+        )
+        every { technologyJpaRepository.countByPortfolioId(1L) } returns Mono.just(0L)
+        every { technologyJpaRepository.findByPortfolioId(1L) } returns Flux.empty()
 
         // When
         val result = portfolioRepositoryAdapter.searchPortfolios(name, type, status, organizationId)
 
         // Then
-        assertEquals(1, result.size)
-        assertEquals("Enterprise Portfolio", result[0].name)
+        StepVerifier.create(result)
+            .expectNextMatches { portfolio ->
+                portfolio.name == "Enterprise Portfolio"
+            }
+            .verifyComplete()
 
         verify { portfolioJpaRepository.searchPortfolios(name, type, status, organizationId) }
         verify { technologyJpaRepository.countByPortfolioId(1L) }

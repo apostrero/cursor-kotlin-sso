@@ -1,11 +1,11 @@
 package com.company.techportfolio.shared.domain.cqrs
 
+import com.company.techportfolio.shared.domain.event.PortfolioCreatedEvent
+import com.company.techportfolio.shared.domain.event.PortfolioDeletedEvent
+import com.company.techportfolio.shared.domain.event.PortfolioUpdatedEvent
 import com.company.techportfolio.shared.domain.port.CommandHandler
 import com.company.techportfolio.shared.domain.port.CommandResult
 import com.company.techportfolio.shared.domain.port.EventPublisher
-import com.company.techportfolio.shared.domain.event.PortfolioCreatedEvent
-import com.company.techportfolio.shared.domain.event.PortfolioUpdatedEvent
-import com.company.techportfolio.shared.domain.event.PortfolioDeletedEvent
 import org.springframework.stereotype.Component
 
 /**
@@ -19,7 +19,7 @@ class CreatePortfolioCommandHandler(
     override fun handle(command: CreatePortfolioCommand): CommandResult {
         // TODO: Implement actual portfolio creation logic
         val portfolioId = 1L // Mock ID for now
-        
+
         // Publish domain event
         eventPublisher.publish(
             PortfolioCreatedEvent(
@@ -29,7 +29,7 @@ class CreatePortfolioCommandHandler(
                 organizationId = command.organizationId
             )
         )
-        
+
         return CommandResult.success("Portfolio created successfully", portfolioId)
     }
 }
@@ -44,7 +44,7 @@ class UpdatePortfolioCommandHandler(
 
     override fun handle(command: UpdatePortfolioCommand): CommandResult {
         // TODO: Implement actual portfolio update logic
-        
+
         // Publish domain event
         eventPublisher.publish(
             PortfolioUpdatedEvent(
@@ -57,7 +57,7 @@ class UpdatePortfolioCommandHandler(
                 )
             )
         )
-        
+
         return CommandResult.success("Portfolio updated successfully", command.portfolioId)
     }
 }
@@ -73,7 +73,7 @@ class DeletePortfolioCommandHandler(
     override fun handle(command: DeletePortfolioCommand): CommandResult {
         // TODO: Implement actual portfolio deletion logic
         val deleted = true // Mock success for now
-        
+
         if (deleted) {
             // Publish domain event
             eventPublisher.publish(
@@ -84,8 +84,8 @@ class DeletePortfolioCommandHandler(
                 )
             )
         }
-        
-        return if (deleted) CommandResult.success("Portfolio deleted successfully", command.portfolioId) 
-               else CommandResult.failure("Portfolio not found")
+
+        return if (deleted) CommandResult.success("Portfolio deleted successfully", command.portfolioId)
+        else CommandResult.failure("Portfolio not found")
     }
 } 

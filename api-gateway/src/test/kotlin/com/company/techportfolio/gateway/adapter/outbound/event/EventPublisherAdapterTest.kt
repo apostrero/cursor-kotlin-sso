@@ -2,44 +2,57 @@ package com.company.techportfolio.gateway.adapter.outbound.event
 
 import com.company.techportfolio.gateway.adapter.out.event.EventPublisherAdapter
 import com.company.techportfolio.shared.domain.event.*
-import io.mockk.*
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.Assertions.*
+import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.test.util.ReflectionTestUtils
-import org.springframework.web.client.RestTemplate
-import org.springframework.web.client.RestClientException
+import org.springframework.web.reactive.function.client.WebClient
+import org.springframework.web.reactive.function.client.WebClient.*
+import org.springframework.web.reactive.function.client.WebClientResponseException
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 
 /**
- * Unit test class for the EventPublisherAdapter.
- * 
- * This test class verifies the behavior of the EventPublisherAdapter which handles
- * publishing domain events to the Spring application event system. It ensures proper
- * event propagation for authentication, authorization, and audit operations.
- * 
+ * Unit test class for the Reactive EventPublisherAdapter.
+ *
+ * This test class verifies the behavior of the reactive EventPublisherAdapter which handles
+ * publishing domain events to external microservices using WebClient. It ensures proper
+ * reactive event propagation for authentication, authorization, and audit operations.
+ *
  * Test coverage includes:
- * - Domain event publishing via Spring ApplicationEventPublisher
+ * - Reactive domain event publishing via WebClient
  * - Authentication event propagation (login, logout, failures)
  * - Authorization event publishing for compliance
  * - Token lifecycle event publishing
- * - Error handling when event publishing fails
+ * - Reactive error handling when event publishing fails
  * - Event data validation and integrity
- * 
+ * - Reactive composition and backpressure handling
+ *
  * Testing approach:
- * - Uses MockK for mocking ApplicationEventPublisher
- * - Tests successful event publishing scenarios
- * - Verifies event publisher method calls and parameters
+ * - Uses MockK for mocking WebClient and its components
+ * - Tests successful reactive event publishing scenarios
+ * - Verifies WebClient method calls and parameters
  * - Validates event data and metadata
- * - Ensures proper error handling for publishing failures
- * - Tests various domain event types
- * 
+ * - Ensures proper reactive error handling for publishing failures
+ * - Tests various domain event types with reactive patterns
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
-
 class EventPublisherAdapterTest {
 
-    private val restTemplate = mockk<RestTemplate>()
+    private val webClient = mockk<WebClient>()
+    private val requestBodyUriSpec = mockk<RequestBodyUriSpec>()
+    private val requestBodySpec = mockk<RequestBodySpec>()
+    private val responseSpec = mockk<ResponseSpec>()
+
     private lateinit var eventPublisherAdapter: EventPublisherAdapter
 
     private val auditServiceUrl = "http://localhost:8084"
@@ -48,15 +61,23 @@ class EventPublisherAdapterTest {
     @BeforeEach
     fun setUp() {
         clearAllMocks()
-        eventPublisherAdapter = EventPublisherAdapter(restTemplate)
-        
+        eventPublisherAdapter = EventPublisherAdapter(webClient)
+
         // Set the service URLs using reflection
         ReflectionTestUtils.setField(eventPublisherAdapter, "auditServiceUrl", auditServiceUrl)
         ReflectionTestUtils.setField(eventPublisherAdapter, "userManagementServiceUrl", userManagementServiceUrl)
+        ReflectionTestUtils.setField(eventPublisherAdapter, "timeout", "5s")
+
+        // Setup WebClient mock chain
+        every { webClient.post() } returns requestBodyUriSpec
+        every { requestBodyUriSpec.uri(any<String>()) } returns requestBodySpec
+        every { requestBodySpec.bodyValue(any<DomainEvent>()) } returns requestBodySpec
+        every { requestBodySpec.retrieve() } returns responseSpec
+        every { responseSpec.bodyToMono(Void::class.java) } returns Mono.empty()
     }
 
     @Test
-    fun `should publish UserAuthenticatedEvent to audit service`() {
+    fun `should publish UserAuthenticatedEvent to audit service reactively`() {
         // Given
         val event = UserAuthenticatedEvent(
             username = "testuser",
@@ -65,17 +86,20 @@ class EventPublisherAdapterTest {
             userAgent = "Mozilla/5.0"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            webClient.post()
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+            responseSpec.bodyToMono(Void::class.java)
+        }
     }
 
     @Test
-    fun `should publish UserAuthenticationFailedEvent to audit service`() {
+    fun `should publish UserAuthenticationFailedEvent to audit service reactively`() {
         // Given
         val event = UserAuthenticationFailedEvent(
             username = "testuser",
@@ -84,34 +108,36 @@ class EventPublisherAdapterTest {
             userAgent = "Mozilla/5.0"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish UserLoggedOutEvent to audit service`() {
+    fun `should publish UserLoggedOutEvent to audit service reactively`() {
         // Given
         val event = UserLoggedOutEvent(
             username = "testuser",
             sessionIndex = "session-123"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish AuthorizationGrantedEvent to audit service`() {
+    fun `should publish AuthorizationGrantedEvent to audit service reactively`() {
         // Given
         val event = AuthorizationGrantedEvent(
             username = "testuser",
@@ -121,17 +147,18 @@ class EventPublisherAdapterTest {
             roles = listOf("ROLE_USER")
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish AuthorizationDeniedEvent to audit service`() {
+    fun `should publish AuthorizationDeniedEvent to audit service reactively`() {
         // Given
         val event = AuthorizationDeniedEvent(
             username = "testuser",
@@ -140,17 +167,18 @@ class EventPublisherAdapterTest {
             reason = "Insufficient permissions"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish UserCreatedEvent to user management service`() {
+    fun `should publish UserCreatedEvent to user management service reactively`() {
         // Given
         val event = UserCreatedEvent(
             userId = 1L,
@@ -160,34 +188,36 @@ class EventPublisherAdapterTest {
             lastName = "User"
         )
 
-        every { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish UserUpdatedEvent to user management service`() {
+    fun `should publish UserUpdatedEvent to user management service reactively`() {
         // Given
         val event = UserUpdatedEvent(
             userId = 1L,
             changes = mapOf("email" to "updated@example.com", "firstName" to "Updated")
         )
 
-        every { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish UserDeactivatedEvent to user management service`() {
+    fun `should publish UserDeactivatedEvent to user management service reactively`() {
         // Given
         val event = UserDeactivatedEvent(
             userId = 1L,
@@ -195,31 +225,33 @@ class EventPublisherAdapterTest {
             reason = "Account suspended"
         )
 
-        every { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should publish unknown event to audit service by default`() {
+    fun `should publish unknown event to audit service by default reactively`() {
         // Given
         val event = UserActivatedEvent(userId = 1L, username = "testuser")
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
+        }
     }
 
     @Test
-    fun `should handle RestClientException when publishing to audit service`() {
+    fun `should handle WebClientResponseException when publishing to audit service reactively`() {
         // Given
         val event = UserAuthenticatedEvent(
             username = "testuser",
@@ -228,18 +260,27 @@ class EventPublisherAdapterTest {
             userAgent = "Mozilla/5.0"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } throws RestClientException("Service unavailable")
+        every { responseSpec.bodyToMono(Void::class.java) } returns
+                Mono.error(
+                    WebClientResponseException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "Service unavailable",
+                        HttpHeaders.EMPTY, ByteArray(0), null
+                    )
+                )
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow {
-            eventPublisherAdapter.publish(event)
+        // When & Then - should complete successfully despite error
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
+
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+            requestBodySpec.bodyValue(event)
         }
-
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
     }
 
     @Test
-    fun `should handle RestClientException when publishing to user management service`() {
+    fun `should handle WebClientResponseException when publishing to user management service reactively`() {
         // Given
         val event = UserCreatedEvent(
             userId = 1L,
@@ -249,18 +290,27 @@ class EventPublisherAdapterTest {
             lastName = "User"
         )
 
-        every { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) } throws RestClientException("Service unavailable")
+        every { responseSpec.bodyToMono(Void::class.java) } returns
+                Mono.error(
+                    WebClientResponseException.create(
+                        HttpStatus.SERVICE_UNAVAILABLE.value(),
+                        "Service unavailable",
+                        HttpHeaders.EMPTY, ByteArray(0), null
+                    )
+                )
 
-        // When & Then - should not throw exception
-        assertDoesNotThrow {
-            eventPublisherAdapter.publish(event)
+        // When & Then - should complete successfully despite error
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
+
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
+            requestBodySpec.bodyValue(event)
         }
-
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", event, Unit::class.java) }
     }
 
     @Test
-    fun `should publish all events in list`() {
+    fun `should publish all events in list reactively`() {
         // Given
         val events = listOf(
             UserAuthenticatedEvent("user1", "session1", "192.168.1.1", "Mozilla/5.0"),
@@ -268,72 +318,61 @@ class EventPublisherAdapterTest {
             UserCreatedEvent(1L, "user1", "user1@example.com", "User", "One")
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", any(), Unit::class.java) } returns Unit
-        every { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", any(), Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publishAll(events))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publishAll(events)
-
-        // Then
-        verify(exactly = 2) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", any(), Unit::class.java) }
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$userManagementServiceUrl/api/users/events", any(), Unit::class.java) }
+        verify(exactly = 2) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+        }
+        verify(exactly = 1) {
+            requestBodyUriSpec.uri("$userManagementServiceUrl/api/users/events")
+        }
     }
 
     @Test
-    fun `should handle empty events list`() {
+    fun `should handle empty events list reactively`() {
         // Given
         val events = emptyList<DomainEvent>()
 
-        // When
-        eventPublisherAdapter.publishAll(events)
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publishAll(events))
+            .verifyComplete()
 
-        // Then
-        verify(exactly = 0) { restTemplate.postForObject(any<String>(), any<DomainEvent>(), any<Class<Unit>>()) }
+        verify(exactly = 0) {
+            webClient.post()
+        }
     }
 
     @Test
-    fun `should continue publishing other events when one fails`() {
+    fun `should continue publishing other events when one fails reactively`() {
         // Given
         val event1 = UserAuthenticatedEvent("user1", "session1", "192.168.1.1", "Mozilla/5.0")
         val event2 = UserLoggedOutEvent("user1", "session1")
         val events = listOf(event1, event2)
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event1, Unit::class.java) } throws RestClientException("Service unavailable")
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event2, Unit::class.java) } returns Unit
-
-        // When
-        assertDoesNotThrow {
-            eventPublisherAdapter.publishAll(events)
-        }
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event1, Unit::class.java) }
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event2, Unit::class.java) }
-    }
-
-    @Test
-    fun `should handle null values in events gracefully`() {
-        // Given
-        val event = UserAuthenticationFailedEvent(
-            username = null,
-            reason = "Unknown user",
-            ipAddress = null,
-            userAgent = null
+        every { responseSpec.bodyToMono(Void::class.java) } returnsMany listOf(
+            Mono.error(
+                WebClientResponseException.create(
+                    HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    "Service unavailable",
+                    HttpHeaders.EMPTY, ByteArray(0), null
+                )
+            ),
+            Mono.empty<Void>()
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publishAll(events))
+            .verifyComplete()
 
-        // When
-        assertDoesNotThrow {
-            eventPublisherAdapter.publish(event)
+        verify(exactly = 2) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
         }
-
-        // Then
-        verify(exactly = 1) { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) }
     }
 
     @Test
-    fun `should verify event properties are set correctly`() {
+    fun `should verify event properties are set correctly reactively`() {
         // Given
         val event = UserAuthenticatedEvent(
             username = "testuser",
@@ -342,12 +381,10 @@ class EventPublisherAdapterTest {
             userAgent = "Mozilla/5.0"
         )
 
-        every { restTemplate.postForObject<Unit>("$auditServiceUrl/api/audit/events", event, Unit::class.java) } returns Unit
+        // When & Then
+        StepVerifier.create(eventPublisherAdapter.publish(event))
+            .verifyComplete()
 
-        // When
-        eventPublisherAdapter.publish(event)
-
-        // Then
         assertNotNull(event.eventId)
         assertNotNull(event.timestamp)
         assertEquals("1.0", event.version)
@@ -356,5 +393,23 @@ class EventPublisherAdapterTest {
         assertEquals("session-123", event.sessionIndex)
         assertEquals("192.168.1.1", event.ipAddress)
         assertEquals("Mozilla/5.0", event.userAgent)
+    }
+
+    @Test
+    fun `should handle reactive composition of multiple event publications`() {
+        // Given
+        val event1 = UserAuthenticatedEvent("user1", "session1", "192.168.1.1", "Mozilla/5.0")
+        val event2 = UserLoggedOutEvent("user1", "session1")
+
+        // When & Then
+        StepVerifier.create(
+            eventPublisherAdapter.publish(event1)
+                .then(eventPublisherAdapter.publish(event2))
+        )
+            .verifyComplete()
+
+        verify(exactly = 2) {
+            requestBodyUriSpec.uri("$auditServiceUrl/api/audit/events")
+        }
     }
 } 

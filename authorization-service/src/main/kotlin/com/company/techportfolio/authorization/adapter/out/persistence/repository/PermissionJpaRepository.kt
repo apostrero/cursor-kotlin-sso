@@ -42,7 +42,7 @@ import org.springframework.stereotype.Repository
  */
 @Repository
 interface PermissionJpaRepository : JpaRepository<PermissionEntity, Long> {
-    
+
     /**
      * Finds a permission by resource and action combination.
      *
@@ -51,7 +51,7 @@ interface PermissionJpaRepository : JpaRepository<PermissionEntity, Long> {
      * @return The permission entity if found, null otherwise
      */
     fun findByResourceAndAction(resource: String, action: String): PermissionEntity?
-    
+
     /**
      * Finds an active permission by resource and action combination.
      *
@@ -63,7 +63,7 @@ interface PermissionJpaRepository : JpaRepository<PermissionEntity, Long> {
      * @return The active permission entity if found, null otherwise
      */
     fun findByResourceAndActionAndIsActiveTrue(resource: String, action: String): PermissionEntity?
-    
+
     /**
      * Finds all permissions assigned to a user through their roles.
      *
@@ -79,12 +79,14 @@ interface PermissionJpaRepository : JpaRepository<PermissionEntity, Long> {
      * @param username The username to find permissions for
      * @return List of active permission entities accessible to the user
      */
-    @Query("SELECT DISTINCT p FROM PermissionEntity p " +
-           "JOIN p.roles r " +
-           "JOIN r.users u " +
-           "WHERE u.username = :username AND p.isActive = true AND r.isActive = true")
+    @Query(
+        "SELECT DISTINCT p FROM PermissionEntity p " +
+                "JOIN p.roles r " +
+                "JOIN r.users u " +
+                "WHERE u.username = :username AND p.isActive = true AND r.isActive = true"
+    )
     fun findPermissionsByUsername(@Param("username") username: String): List<PermissionEntity>
-    
+
     /**
      * Checks if a user has a specific permission for a resource and action.
      *
@@ -100,11 +102,13 @@ interface PermissionJpaRepository : JpaRepository<PermissionEntity, Long> {
      * @param action The action identifier to check authorization for
      * @return true if the user has the specified permission, false otherwise
      */
-    @Query("SELECT COUNT(p) > 0 FROM PermissionEntity p " +
-           "JOIN p.roles r " +
-           "JOIN r.users u " +
-           "WHERE u.username = :username AND p.resource = :resource AND p.action = :action " +
-           "AND p.isActive = true AND r.isActive = true")
+    @Query(
+        "SELECT COUNT(p) > 0 FROM PermissionEntity p " +
+                "JOIN p.roles r " +
+                "JOIN r.users u " +
+                "WHERE u.username = :username AND p.resource = :resource AND p.action = :action " +
+                "AND p.isActive = true AND r.isActive = true"
+    )
     fun hasPermission(
         @Param("username") username: String,
         @Param("resource") resource: String,

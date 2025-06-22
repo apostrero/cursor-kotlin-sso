@@ -7,18 +7,18 @@ import java.time.LocalDateTime
 
 /**
  * JPA entity representing a role in the authorization system.
- * 
+ *
  * This entity maps to the "roles" database table and represents roles that
  * can be assigned to users. Roles are collections of permissions that provide
  * a hierarchical approach to authorization management.
- * 
+ *
  * @property id Unique identifier for the role (auto-generated)
  * @property name Unique name of the role (required)
  * @property description Optional description of the role's purpose
  * @property isActive Whether the role is currently active
  * @property createdAt Timestamp when the role was created
  * @property permissions Set of permissions granted by this role
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */

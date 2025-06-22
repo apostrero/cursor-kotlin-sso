@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.port
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 // Test concrete implementation of Command
@@ -59,14 +59,14 @@ class CommandTest {
     fun `should support data class equality for concrete commands`() {
         val commandId = "same-id"
         val timestamp = LocalDateTime.now()
-        
+
         val command1 = TestCommand(
             commandData = "same data",
             customCommandId = commandId,
             customTimestamp = timestamp,
             customVersion = "1.0"
         )
-        
+
         val command2 = TestCommand(
             commandData = "same data",
             customCommandId = commandId,

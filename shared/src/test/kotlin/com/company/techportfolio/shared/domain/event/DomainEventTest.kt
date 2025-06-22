@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.event
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 // Test concrete implementation of DomainEvent
@@ -76,14 +76,14 @@ class DomainEventTest {
     fun `should support data class equality for concrete events`() {
         val eventId = "same-id"
         val timestamp = LocalDateTime.now()
-        
+
         val event1 = TestEvent(
             testData = "same data",
             customEventId = eventId,
             customTimestamp = timestamp,
             customVersion = "1.0"
         )
-        
+
         val event2 = TestEvent(
             testData = "same data",
             customEventId = eventId,

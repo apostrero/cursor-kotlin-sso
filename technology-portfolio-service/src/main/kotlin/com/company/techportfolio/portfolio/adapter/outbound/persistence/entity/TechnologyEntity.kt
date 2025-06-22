@@ -1,26 +1,28 @@
 package com.company.techportfolio.portfolio.adapter.out.persistence.entity
 
-import com.company.techportfolio.shared.domain.model.TechnologyType
 import com.company.techportfolio.shared.domain.model.MaturityLevel
 import com.company.techportfolio.shared.domain.model.RiskLevel
-import jakarta.persistence.*
+import com.company.techportfolio.shared.domain.model.TechnologyType
+import org.springframework.data.annotation.Id
+import org.springframework.data.relational.core.mapping.Column
+import org.springframework.data.relational.core.mapping.Table
 import java.math.BigDecimal
 import java.time.LocalDateTime
 
 /**
- * Technology Entity - JPA Database Mapping
- * 
+ * Technology Entity - R2DBC Database Mapping
+ *
  * This entity class represents the database mapping for technologies within
- * portfolios in the persistence layer. It uses JPA annotations to define the
- * table structure, constraints, and relationships for comprehensive technology
+ * portfolios in the persistence layer. It uses R2DBC annotations to define the
+ * table structure, constraints, and relationships for reactive technology
  * data storage including cost tracking and vendor management.
- * 
+ *
  * ## Database Mapping:
  * - **Table**: `technologies`
  * - **Primary Key**: Auto-generated Long ID
  * - **Foreign Key**: portfolio_id references portfolios table
  * - **Indexes**: Recommended on portfolio_id, category, type, vendor_name
- * 
+ *
  * ## Business Rules Enforced:
  * - Technology name is required
  * - Category classification is required
@@ -29,17 +31,22 @@ import java.time.LocalDateTime
  * - Cost fields use precision 15, scale 2 for financial accuracy
  * - Active flag defaults to true for new technologies
  * - Created timestamp is required and immutable
- * 
+ *
  * ## Cost Management:
  * - Annual, license, and maintenance costs tracked separately
  * - BigDecimal used for precise financial calculations
  * - All cost fields are optional to support incomplete data
- * 
+ *
  * ## Vendor Information:
  * - Vendor name and contact information tracking
  * - Support contract expiry date management
  * - Optional fields to support various technology sources
- * 
+ *
+ * ## Reactive Features:
+ * - Non-blocking database operations
+ * - Reactive stream support
+ * - Optimized for reactive repositories
+ *
  * @property id Unique identifier (auto-generated primary key)
  * @property name Technology name (required)
  * @property description Optional detailed description (TEXT field)
@@ -58,179 +65,174 @@ import java.time.LocalDateTime
  * @property createdAt Timestamp when technology was created (immutable)
  * @property updatedAt Timestamp when technology was last updated (nullable)
  * @property portfolioId Foreign key to the owning portfolio (required)
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  * @see TechnologyType
  * @see MaturityLevel
  * @see RiskLevel
  */
-@Entity
-@Table(name = "technologies")
-class TechnologyEntity(
+@Table("technologies")
+data class TechnologyEntity(
     /**
      * Unique identifier for the technology.
-     * 
+     *
      * Auto-generated primary key using database identity strategy.
      * Null for new entities before persistence.
      */
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
 
     /**
      * Name of the technology.
-     * 
+     *
      * Required field that serves as the primary identifier.
      * Should be descriptive and recognizable by users.
      */
-    @Column(name = "name", nullable = false)
+    @Column("name")
     val name: String,
 
     /**
      * Optional detailed description of the technology.
-     * 
+     *
      * Stored as TEXT column to support longer descriptions.
      * Can include purpose, features, and usage information.
      */
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column("description")
     val description: String? = null,
 
     /**
      * Technology category classification.
-     * 
+     *
      * Required field for organizing and filtering technologies.
      * Examples: "Framework", "Database", "Cloud Service", "Tool".
      */
-    @Column(name = "category", nullable = false)
+    @Column("category")
     val category: String,
 
     /**
      * Optional version information.
-     * 
+     *
      * Can store version numbers, release names, or other
      * version identifiers for technology lifecycle tracking.
      */
-    @Column(name = "version")
+    @Column("version")
     val version: String? = null,
 
     /**
      * Technology type classification.
-     * 
+     *
      * Enum value stored as string for standardized categorization.
      * Required field for technology taxonomy and reporting.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "type", nullable = false)
+    @Column("type")
     val type: TechnologyType,
 
     /**
      * Maturity level assessment.
-     * 
+     *
      * Enum value indicating the technology's maturity stage.
      * Used for risk assessment and adoption decisions.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "maturity_level", nullable = false)
+    @Column("maturity_level")
     val maturityLevel: MaturityLevel,
 
     /**
      * Risk level assessment.
-     * 
+     *
      * Enum value indicating the associated risk level.
      * Critical for compliance and risk management reporting.
      */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "risk_level", nullable = false)
+    @Column("risk_level")
     val riskLevel: RiskLevel,
 
     /**
      * Optional annual cost of the technology.
-     * 
+     *
      * BigDecimal with precision 15, scale 2 for financial accuracy.
      * Includes all recurring annual expenses for this technology.
      */
-    @Column(name = "annual_cost", precision = 15, scale = 2)
+    @Column("annual_cost")
     val annualCost: BigDecimal? = null,
 
     /**
      * Optional licensing cost.
-     * 
+     *
      * BigDecimal for precise financial tracking of license expenses.
      * May be one-time or recurring depending on license model.
      */
-    @Column(name = "license_cost", precision = 15, scale = 2)
+    @Column("license_cost")
     val licenseCost: BigDecimal? = null,
 
     /**
      * Optional maintenance cost.
-     * 
+     *
      * BigDecimal for tracking ongoing maintenance and support costs.
      * Separate from licensing for detailed cost analysis.
      */
-    @Column(name = "maintenance_cost", precision = 15, scale = 2)
+    @Column("maintenance_cost")
     val maintenanceCost: BigDecimal? = null,
 
     /**
      * Optional vendor or supplier name.
-     * 
+     *
      * Tracks the primary vendor for vendor relationship management
      * and consolidation reporting.
      */
-    @Column(name = "vendor_name")
+    @Column("vendor_name")
     val vendorName: String? = null,
 
     /**
      * Optional vendor contact information.
-     * 
+     *
      * Can store email, phone, or other contact details
      * for vendor relationship management.
      */
-    @Column(name = "vendor_contact")
+    @Column("vendor_contact")
     val vendorContact: String? = null,
 
     /**
      * Optional support contract expiration date.
-     * 
+     *
      * Tracks when support contracts expire for proactive
      * renewal management and risk mitigation.
      */
-    @Column(name = "support_contract_expiry")
+    @Column("support_contract_expiry")
     val supportContractExpiry: LocalDateTime? = null,
 
     /**
      * Active flag for the technology.
-     * 
+     *
      * Used for soft deletion and filtering. Defaults to true.
      * Inactive technologies are typically hidden from normal operations.
      */
-    @Column(name = "is_active", nullable = false)
+    @Column("is_active")
     val isActive: Boolean = true,
 
     /**
      * Timestamp when the technology was created.
-     * 
+     *
      * Immutable field set once during initial creation.
      * Required field for audit trail and lifecycle tracking.
      */
-    @Column(name = "created_at", nullable = false)
+    @Column("created_at")
     val createdAt: LocalDateTime,
 
     /**
      * Timestamp when the technology was last updated.
-     * 
+     *
      * Nullable field that gets updated on each modification.
      * Null for technologies that have never been updated after creation.
      */
-    @Column(name = "updated_at")
+    @Column("updated_at")
     val updatedAt: LocalDateTime? = null,
 
     /**
      * Foreign key to the owning portfolio.
-     * 
-     * Required field establishing the portfolio relationship.
-     * References the portfolio ID that contains this technology.
+     *
+     * Required field that establishes the portfolio relationship.
+     * References the portfolio ID from the portfolios table.
      */
-    @Column(name = "portfolio_id", nullable = false)
+    @Column("portfolio_id")
     val portfolioId: Long
 ) 

@@ -18,7 +18,7 @@ class BulkUpdatePortfolioStatusCommandHandler(
         command.portfolioIds.forEach { _ ->
             // Update logic would go here
         }
-        
+
         return CommandResult.success("Bulk status update completed", command.portfolioIds.size)
     }
 }

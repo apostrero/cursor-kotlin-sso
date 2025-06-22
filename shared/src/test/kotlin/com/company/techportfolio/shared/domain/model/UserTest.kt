@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class UserTest {
@@ -34,7 +34,7 @@ class UserTest {
         val now = LocalDateTime.now()
         val role1 = Role(id = 1, name = "USER")
         val role2 = Role(id = 2, name = "ADMIN")
-        
+
         val user = User(
             id = 1L,
             username = "testuser",
@@ -156,7 +156,7 @@ class UserTest {
     @Test
     fun `should support data class equality`() {
         val timestamp = LocalDateTime.of(2023, 1, 1, 12, 0, 0)
-        
+
         val user1 = User(
             username = "testuser",
             email = "test@example.com",
@@ -214,7 +214,7 @@ class UserTest {
         val role1 = Role(id = 1, name = "USER")
         val role2 = Role(id = 2, name = "ADMIN")
         val role3 = Role(id = 3, name = "MANAGER")
-        
+
         val user = User(
             username = "testuser",
             email = "test@example.com",
@@ -299,11 +299,11 @@ class UserTest {
         val readPermission = Permission(name = "READ", resource = "portfolio", action = "read")
         val writePermission = Permission(name = "WRITE", resource = "portfolio", action = "write")
         val adminPermission = Permission(name = "ADMIN", resource = "system", action = "manage")
-        
+
         val userRole = Role(name = "USER", permissions = setOf(readPermission))
         val managerRole = Role(name = "MANAGER", permissions = setOf(readPermission, writePermission))
         val adminRole = Role(name = "ADMIN", permissions = setOf(readPermission, writePermission, adminPermission))
-        
+
         val user = User(
             username = "superuser",
             email = "super@example.com",
@@ -328,7 +328,7 @@ class UserTest {
             "user+tag@example.org",
             "123@numbers.com"
         )
-        
+
         val users = validEmails.mapIndexed { index, email ->
             User(
                 username = "user$index",
@@ -348,9 +348,27 @@ class UserTest {
     @Test
     fun `should handle different organization assignments`() {
         val users = listOf(
-            User(username = "user1", email = "user1@example.com", firstName = "John", lastName = "Doe", organizationId = 1L),
-            User(username = "user2", email = "user2@example.com", firstName = "Jane", lastName = "Doe", organizationId = 2L),
-            User(username = "user3", email = "user3@example.com", firstName = "Bob", lastName = "Doe", organizationId = null)
+            User(
+                username = "user1",
+                email = "user1@example.com",
+                firstName = "John",
+                lastName = "Doe",
+                organizationId = 1L
+            ),
+            User(
+                username = "user2",
+                email = "user2@example.com",
+                firstName = "Jane",
+                lastName = "Doe",
+                organizationId = 2L
+            ),
+            User(
+                username = "user3",
+                email = "user3@example.com",
+                firstName = "Bob",
+                lastName = "Doe",
+                organizationId = null
+            )
         )
 
         assertEquals(1L, users[0].organizationId)

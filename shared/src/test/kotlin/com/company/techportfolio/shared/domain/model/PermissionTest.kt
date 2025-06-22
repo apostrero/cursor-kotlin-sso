@@ -1,7 +1,7 @@
 package com.company.techportfolio.shared.domain.model
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
 
 class PermissionTest {
@@ -26,7 +26,7 @@ class PermissionTest {
     @Test
     fun `should create permission with all parameters`() {
         val now = LocalDateTime.now()
-        
+
         val permission = Permission(
             id = 1L,
             name = "WRITE_PORTFOLIO",
@@ -82,7 +82,7 @@ class PermissionTest {
     @Test
     fun `should support data class equality`() {
         val timestamp = LocalDateTime.of(2023, 1, 1, 12, 0, 0)
-        
+
         val permission1 = Permission(
             name = "READ_PORTFOLIO",
             resource = "portfolio",

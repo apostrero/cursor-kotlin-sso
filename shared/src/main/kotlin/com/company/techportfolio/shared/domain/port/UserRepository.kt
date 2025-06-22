@@ -1,8 +1,8 @@
 package com.company.techportfolio.shared.domain.port
 
-import com.company.techportfolio.shared.domain.model.User
 import com.company.techportfolio.shared.domain.model.Organization
 import com.company.techportfolio.shared.domain.model.Role
+import com.company.techportfolio.shared.domain.model.User
 
 interface UserRepository {
     fun findById(id: Long): User?

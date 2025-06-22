@@ -1,0 +1,202 @@
+@startuml SAML - Authenticated User Flow
+!theme plain
+title SAML - Authenticated User Accessing Protected Resource (SimpleSAMLphp IdP)
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🆔 SimpleSAMLphp\nIdP (8081)" as IdP
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== User Already Authenticated with SAML ==
+note over User, Browser: User has valid JWT token from SAML authentication\nstored in browser cookies (auth-token=<JWT>)
+
+== Direct Access to Protected Resource ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Browser: Retrieve JWT token from cookies
+note right: JWT token from previous SAML login:\n{userId: 1, username: "user1",\nemail: "user1@company.com",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nsamlNameId: "user1@company.com"}
+
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>\nCookie: auth-token=<JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token from Authorization header or cookies
+Gateway -> Gateway: Validate JWT signature
+Gateway -> Gateway: Check JWT expiration
+note right: JWT is valid and not expired\nSAML-authenticated token
+
+Gateway -> Gateway: Extract user claims from JWT
+note right: Claims: {userId: 1, username: "user1",\nemail: "user1@company.com",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nsamlNameId: "user1@company.com"}
+
+== SAML User Authorization Check ==
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "GET"}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT token
+AuthService -> AuthService: Extract user ID from JWT (userId: 1)
+AuthService -> AuthService: Check if SAML user exists in database
+
+AuthService -> AuthDB: Query user permissions with SAML data\nSELECT u.username, u.email, u.saml_name_id, r.name as role\nFROM users u\nJOIN user_roles ur ON u.id = ur.user_id\nJOIN roles r ON ur.role_id = r.id\nWHERE u.id = 1 AND u.saml_name_id IS NOT NULL
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{username: "user1", email: "user1@company.com",\nsaml_name_id: "user1@company.com",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check if user has PORTFOLIO_READ permission
+note right: User has PORTFOLIO_READ permission\nfor /api/portfolios GET operation
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, username: "user1", email: "user1@company.com", saml_name_id: "user1@company.com", roles: ["ROLE_PORTFOLIO_MANAGER"], permissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}}
+deactivate AuthService
+
+== Service Communication with SAML User ==
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>\nX-User-ID: 1\nX-SAML-NameID: user1@company.com
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioService: Extract user ID from JWT (userId: 1)
+PortfolioService -> PortfolioService: Extract SAML NameID from JWT
+PortfolioService -> PortfolioService: Check user permissions for portfolio access
+
+PortfolioService -> PortfolioDB: SELECT * FROM portfolios\nWHERE owner_id = 1 OR is_public = true\nORDER BY created_at DESC
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data\n[{id: 1, name: "Enterprise Portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", ...},\n{id: 2, name: "Project Alpha", owner_id: 1, type: "PROJECT", status: "ACTIVE", ...}]
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Filter portfolios based on user permissions
+PortfolioService -> PortfolioService: Apply SAML user-specific data filtering
+PortfolioService -> Gateway: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...},\n{id: 2, name: "Project Alpha", description: "Alpha project portfolio", owner_id: 1, type: "PROJECT", status: "ACTIVE", created_at: "2024-01-20T14:15:00Z", ...}]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...},\n{id: 2, name: "Project Alpha", description: "Alpha project portfolio", owner_id: 1, type: "PROJECT", status: "ACTIVE", created_at: "2024-01-20T14:15:00Z", ...}]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Alternative: Create New Portfolio (SAML User) ==
+User -> Browser: Create new portfolio\nPOST /api/portfolios
+Browser -> Gateway: POST /api/portfolios\nAuthorization: Bearer <JWT>\nContent-Type: application/json\n{name: "New SAML Portfolio", description: "Portfolio created by SAML user", type: "PROJECT"}
+activate Gateway
+
+Gateway -> Gateway: Extract and validate JWT
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "POST"}
+activate AuthService
+
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{roles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check PORTFOLIO_CREATE permission
+note right: User has PORTFOLIO_CREATE permission\nfor /api/portfolios POST operation
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, username: "user1", saml_name_id: "user1@company.com", roles: ["ROLE_PORTFOLIO_MANAGER"]}}
+deactivate AuthService
+
+Gateway -> PortfolioService: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name: "New SAML Portfolio", description: "Portfolio created by SAML user", type: "PROJECT"}
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT and extract user ID (userId: 1)
+PortfolioService -> PortfolioService: Extract SAML NameID for audit trail
+PortfolioService -> PortfolioService: Validate portfolio data
+PortfolioService -> PortfolioDB: INSERT INTO portfolios\n(name, description, type, owner_id, status, created_at)\nVALUES (?, ?, ?, ?, 'ACTIVE', NOW())
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return created portfolio ID (id: 3)
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Publish PortfolioCreatedEvent with SAML context
+PortfolioService -> Gateway: 201 Created\n{portfolio: {id: 3, name: "New SAML Portfolio", description: "Portfolio created by SAML user", type: "PROJECT", owner_id: 1, status: "ACTIVE", created_at: "2024-01-22T09:45:00Z"}}
+deactivate PortfolioService
+
+Gateway -> Browser: 201 Created\n{portfolio: {id: 3, name: "New SAML Portfolio", description: "Portfolio created by SAML user", type: "PROJECT", owner_id: 1, status: "ACTIVE", created_at: "2024-01-22T09:45:00Z"}}
+deactivate Gateway
+
+Browser -> User: Show success message\nand redirect to new portfolio
+
+== Alternative: Different SAML User Roles ==
+note over User, PortfolioDB
+Different SAML User Scenarios:
+
+1. user1 (portfolio-managers group):
+   - SAML NameID: user1@company.com
+   - Roles: [ROLE_PORTFOLIO_MANAGER]
+   - Permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE]
+   - Can manage own portfolios
+
+2. user2 (viewers group):
+   - SAML NameID: user2@company.com
+   - Roles: [ROLE_VIEWER]
+   - Permissions: [PORTFOLIO_READ]
+   - Can only view portfolios
+
+3. admin (admins group):
+   - SAML NameID: admin@company.com
+   - Roles: [ROLE_ADMIN]
+   - Permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE, PORTFOLIO_DELETE, USER_MANAGE]
+   - Full system access
+end note
+
+== SAML Token Refresh (Optional) ==
+note over Gateway, AuthService
+SAML Token Refresh Flow:
+1. Gateway detects JWT is close to expiration
+2. Gateway checks if user has valid SAML session
+3. If SAML session valid, refresh JWT with same SAML claims
+4. If SAML session expired, redirect to SAML login
+5. Gateway updates response with new token
+6. Browser stores updated token
+end note
+
+== SAML Session Management ==
+note over Gateway, IdP
+SAML Session Management:
+1. SAML sessions managed by SimpleSAMLphp IdP
+2. JWT tokens have shorter expiration than SAML sessions
+3. SAML logout invalidates both SAML session and JWT
+4. Single Sign-Out (SLO) supported
+5. Session timeout configurable in IdP
+end note
+
+== SAML Error Handling ==
+note over User, PortfolioDB
+SAML Error Scenarios for Authenticated Users:
+1. Expired JWT → 401 Unauthorized + redirect to SAML login
+2. Invalid JWT signature → 401 Unauthorized + redirect to SAML login
+3. SAML user not found in database → 401 Unauthorized + redirect to SAML login
+4. SAML session expired → 401 Unauthorized + redirect to SAML login
+5. Insufficient permissions → 403 Forbidden
+6. Resource not found → 404 Not Found
+7. SAML IdP unavailable → 503 Service Unavailable
+8. SAML metadata changed → 500 Internal Server Error
+end note
+
+== SAML Configuration Details ==
+note over Gateway, IdP
+SAML Configuration (docker-compose.yml):
+services:
+  simplesamlphp:
+    image: kristophjunge/test-saml-idp
+    ports:
+      - "8081:8080"
+    environment:
+      - SIMPLESAMLPHP_SP_ENTITY_ID=http://localhost:8080
+      - SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE=http://localhost:8080/saml/acs
+      - SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE=http://localhost:8080/saml/logout
+      - SIMPLESAMLPHP_IDP_ENTITY_ID=http://localhost:8081/simplesaml/saml2/idp/metadata.php
+
+SAML User Mapping:
+- SAML NameID → User identifier
+- SAML groups → Application roles
+- SAML attributes → User profile data
+- SAML session → JWT token lifecycle
+
+SAML Security Features:
+1. XML signature validation
+2. SAML response encryption
+3. Timestamp validation
+4. Destination validation
+5. Issuer validation
+6. Attribute mapping validation
+end note
+
+@enduml 

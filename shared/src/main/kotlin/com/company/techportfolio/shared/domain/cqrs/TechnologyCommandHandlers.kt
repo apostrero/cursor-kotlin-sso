@@ -1,11 +1,11 @@
 package com.company.techportfolio.shared.domain.cqrs
 
+import com.company.techportfolio.shared.domain.event.TechnologyAddedEvent
+import com.company.techportfolio.shared.domain.event.TechnologyRemovedEvent
+import com.company.techportfolio.shared.domain.event.TechnologyUpdatedEvent
 import com.company.techportfolio.shared.domain.port.CommandHandler
 import com.company.techportfolio.shared.domain.port.CommandResult
 import com.company.techportfolio.shared.domain.port.EventPublisher
-import com.company.techportfolio.shared.domain.event.TechnologyAddedEvent
-import com.company.techportfolio.shared.domain.event.TechnologyUpdatedEvent
-import com.company.techportfolio.shared.domain.event.TechnologyRemovedEvent
 import org.springframework.stereotype.Component
 
 /**
@@ -19,7 +19,7 @@ class AddTechnologyCommandHandler(
     override fun handle(command: AddTechnologyCommand): CommandResult {
         // TODO: Implement actual technology addition logic
         val technologyId = 1L // Mock ID for now
-        
+
         // Publish domain event
         eventPublisher.publish(
             TechnologyAddedEvent(
@@ -28,7 +28,7 @@ class AddTechnologyCommandHandler(
                 technologyName = command.name
             )
         )
-        
+
         return CommandResult.success("Technology added successfully", technologyId)
     }
 }
@@ -44,7 +44,7 @@ class UpdateTechnologyCommandHandler(
     override fun handle(command: UpdateTechnologyCommand): CommandResult {
         // TODO: Implement actual technology update logic
         val technologyId = command.technologyId
-        
+
         // Publish domain event
         eventPublisher.publish(
             TechnologyUpdatedEvent(
@@ -60,7 +60,7 @@ class UpdateTechnologyCommandHandler(
                 )
             )
         )
-        
+
         return CommandResult.success("Technology updated successfully", technologyId)
     }
 }
@@ -76,7 +76,7 @@ class RemoveTechnologyCommandHandler(
     override fun handle(command: RemoveTechnologyCommand): CommandResult {
         // TODO: Implement actual technology removal logic
         val removed = true // Mock success for now
-        
+
         if (removed) {
             // Publish domain event
             eventPublisher.publish(
@@ -87,8 +87,8 @@ class RemoveTechnologyCommandHandler(
                 )
             )
         }
-        
-        return if (removed) CommandResult.success("Technology removed successfully", command.technologyId) 
-               else CommandResult.failure("Technology not found")
+
+        return if (removed) CommandResult.success("Technology removed successfully", command.technologyId)
+        else CommandResult.failure("Technology not found")
     }
 } 

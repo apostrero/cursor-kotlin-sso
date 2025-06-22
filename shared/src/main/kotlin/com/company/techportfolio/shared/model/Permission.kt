@@ -7,11 +7,11 @@ import java.time.LocalDateTime
 
 /**
  * JPA entity representing a permission in the authorization system.
- * 
+ *
  * This entity maps to the "permissions" database table and represents specific
  * permissions that define what actions can be performed on what resources.
  * Permissions are the atomic units of authorization control.
- * 
+ *
  * @property id Unique identifier for the permission (auto-generated)
  * @property name Unique name of the permission (required)
  * @property description Optional description of the permission's purpose
@@ -19,7 +19,7 @@ import java.time.LocalDateTime
  * @property action The action this permission allows (required)
  * @property isActive Whether the permission is currently active
  * @property createdAt Timestamp when the permission was created
- * 
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -57,10 +57,10 @@ data class Permission(
 ) {
     /**
      * Generates a permission string in the format "resource:action".
-     * 
+     *
      * This method provides a standardized way to represent permissions
      * as strings, which is useful for authorization checks and logging.
-     * 
+     *
      * @return Permission string in the format "resource:action"
      */
     fun getPermissionString(): String = "$resource:$action"

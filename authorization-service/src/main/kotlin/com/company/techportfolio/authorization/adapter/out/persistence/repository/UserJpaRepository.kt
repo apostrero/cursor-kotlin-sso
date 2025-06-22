@@ -38,7 +38,7 @@ import org.springframework.stereotype.Repository
  */
 @Repository
 interface UserJpaRepository : JpaRepository<UserEntity, Long> {
-    
+
     /**
      * Finds a user by their username.
      *
@@ -46,7 +46,7 @@ interface UserJpaRepository : JpaRepository<UserEntity, Long> {
      * @return The user entity if found, null otherwise
      */
     fun findByUsername(username: String): UserEntity?
-    
+
     /**
      * Finds an active user by their username.
      *
@@ -57,7 +57,7 @@ interface UserJpaRepository : JpaRepository<UserEntity, Long> {
      * @return The active user entity if found, null otherwise
      */
     fun findByUsernameAndIsActiveTrue(username: String): UserEntity?
-    
+
     /**
      * Retrieves the organization ID for a specific user.
      *
@@ -69,7 +69,7 @@ interface UserJpaRepository : JpaRepository<UserEntity, Long> {
      */
     @Query("SELECT u.organizationId FROM UserEntity u WHERE u.username = :username")
     fun findOrganizationIdByUsername(@Param("username") username: String): Long?
-    
+
     /**
      * Checks if a user is currently active.
      *
