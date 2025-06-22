@@ -1,0 +1,42 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  
+  r2dbc:
+    url: r2dbc:h2:mem:///testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password: 
+  
+  flyway:
+    enabled: false
+  
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+  
+  # Simplified JWT Security Configuration for Tests
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: test-secret-key-for-unit-tests-only-not-for-production
+
+server:
+  port: 0
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always 

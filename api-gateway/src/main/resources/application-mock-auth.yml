@@ -1,0 +1,105 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.saml2.Saml2RelyingPartyAutoConfiguration
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+    gateway:
+      enabled: false  # Disable gateway in mock mode for simplicity
+  security:
+    saml2:
+      relyingparty:
+        registration: {}  # Disable SAML in mock mode
+  thymeleaf:
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+
+# JWT Configuration (same as main profile)
+jwt:
+  secret: ${JWT_SECRET:your-super-secret-jwt-signing-key-that-is-at-least-512-bits-long-for-HS512-algorithm-development-only-do-not-use-in-production}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Management and Monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,gateway
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Logging
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      authorization-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+      technology-portfolio-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+
+# Mock Authentication Configuration
+mock:
+  auth:
+    enabled: true
+    login-page: /mock-login
+    success-url: /api/auth/mock-success
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER, READ_PORTFOLIO, WRITE_PORTFOLIO, VIEW_ANALYTICS]
+        email: user1@example.com
+        firstName: User1
+        lastName: MockUser
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER, READ_PORTFOLIO]
+        email: user2@example.com
+        firstName: User2
+        lastName: MockUser
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO, MANAGE_USERS, VIEW_ANALYTICS]
+        email: admin@example.com
+        firstName: Admin
+        lastName: MockUser 

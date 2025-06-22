@@ -1,0 +1,272 @@
+spring:
+  r2dbc:
+    url: r2dbc:tc:postgresql:15:///testdb?TC_DAEMON=true
+    username: test
+    password: test
+    pool:
+      initial-size: 5
+      max-size: 20
+      max-idle-time: 30s
+      max-acquire-time: 30s
+      max-lifetime: 60s
+  
+  flyway:
+    enabled: false
+  
+  cloud:
+    config:
+      enabled: false
+      import-check:
+        enabled: false
+  
+  # JWT Security Configuration for Phase 7 Tests
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          secret: phase7-test-secret-key-for-comprehensive-testing-only
+          expiration: 3600
+
+# Server configuration for Phase 7 testing
+server:
+  port: 0
+  shutdown: graceful
+  netty:
+    connection-timeout: 30s
+    idle-timeout: 60s
+
+# Eureka configuration for Phase 7 testing
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+# Management and monitoring for Phase 7 testing
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      percentiles:
+        http.server.requests: 0.5,0.95,0.99
+
+# Logging configuration for Phase 7 testing
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web.reactive: DEBUG
+    reactor.netty: DEBUG
+    io.r2dbc: DEBUG
+    org.springframework.r2dbc: DEBUG
+    org.springframework.transaction: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/phase7-test.log
+    max-size: 100MB
+    max-history: 30
+
+# Test-specific configuration for Phase 7
+test:
+  phase7:
+    enabled: true
+    performance:
+      enabled: true
+      metrics:
+        enabled: true
+        export: true
+    load:
+      enabled: true
+      concurrent-users: 200
+      requests-per-user: 10
+      burst-size: 500
+      sustained-duration: 30s
+    integration:
+      enabled: true
+      cleanup: true
+      data-setup: true
+    monitoring:
+      enabled: true
+      memory-tracking: true
+      connection-pool-monitoring: true
+
+# Performance testing configuration
+performance:
+  test:
+    timeout: 60s
+    concurrent-requests: 100
+    ramp-up-time: 10s
+    hold-time: 30s
+    ramp-down-time: 10s
+  monitoring:
+    enabled: true
+    metrics:
+      - response-time
+      - throughput
+      - error-rate
+      - memory-usage
+      - connection-pool-usage
+
+# Load testing configuration
+load:
+  test:
+    scenarios:
+      - name: "concurrent-users"
+        users: 200
+        ramp-up: 30s
+        hold: 60s
+        ramp-down: 30s
+      - name: "burst-traffic"
+        burst-size: 500
+        burst-count: 5
+        interval: 10s
+      - name: "sustained-load"
+        requests-per-second: 100
+        duration: 300s
+    monitoring:
+      enabled: true
+      real-time: true
+      alerts:
+        error-rate-threshold: 1.0
+        response-time-threshold: 2000ms
+
+# Integration testing configuration
+integration:
+  test:
+    scenarios:
+      - name: "portfolio-lifecycle"
+        enabled: true
+        steps:
+          - create-portfolio
+          - add-technology
+          - update-portfolio
+          - delete-technology
+          - delete-portfolio
+      - name: "authentication-flow"
+        enabled: true
+        steps:
+          - unauthenticated-access
+          - user-authentication
+          - admin-authentication
+          - invalid-tokens
+      - name: "error-handling"
+        enabled: true
+        steps:
+          - invalid-data
+          - missing-resources
+          - validation-errors
+          - database-errors
+    data:
+      cleanup: true
+      setup: true
+      verification: true
+
+# Database testing configuration
+database:
+  test:
+    isolation: true
+    cleanup: true
+    setup: true
+    verification: true
+    connection-pool:
+      monitoring: true
+      metrics: true
+    performance:
+      monitoring: true
+      slow-query-threshold: 1000ms
+
+# Security testing configuration
+security:
+  test:
+    jwt:
+      enabled: true
+      test-tokens: true
+      validation: true
+    authentication:
+      enabled: true
+      scenarios:
+        - valid-user
+        - invalid-user
+        - expired-token
+        - malformed-token
+    authorization:
+      enabled: true
+      scenarios:
+        - user-role
+        - admin-role
+        - no-role
+        - invalid-role
+
+# Event testing configuration
+events:
+  test:
+    publishing:
+      enabled: true
+      verification: true
+      scenarios:
+        - portfolio-created
+        - technology-added
+        - portfolio-updated
+        - technology-removed
+    streaming:
+      enabled: true
+      scenarios:
+        - real-time-events
+        - event-filtering
+        - event-replay
+        - error-handling
+
+# Monitoring and metrics for Phase 7
+monitoring:
+  phase7:
+    enabled: true
+    metrics:
+      - http.server.requests
+      - r2dbc.connections.active
+      - r2dbc.connections.idle
+      - reactor.netty.connectionpool
+      - jvm.memory.used
+      - jvm.memory.max
+      - process.cpu.usage
+    alerts:
+      - name: "high-error-rate"
+        condition: "error-rate > 1%"
+        action: "log-warning"
+      - name: "high-response-time"
+        condition: "response-time > 2000ms"
+        action: "log-warning"
+      - name: "memory-pressure"
+        condition: "memory-usage > 80%"
+        action: "log-warning"
+
+# Test reporting configuration
+reporting:
+  phase7:
+    enabled: true
+    format: "json"
+    location: "reports/phase7"
+    include:
+      - performance-metrics
+      - load-test-results
+      - integration-test-results
+      - error-summary
+      - recommendations 

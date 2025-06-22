@@ -1,47 +1,99 @@
 package com.company.techportfolio.portfolio.domain.service
 
 import com.company.techportfolio.portfolio.domain.model.*
-import com.company.techportfolio.portfolio.domain.port.PortfolioRepository
-import com.company.techportfolio.portfolio.domain.port.TechnologyRepository
 import com.company.techportfolio.portfolio.domain.port.PortfolioQueryRepository
+import com.company.techportfolio.portfolio.domain.port.PortfolioRepository
 import com.company.techportfolio.portfolio.domain.port.TechnologyQueryRepository
-import com.company.techportfolio.shared.domain.model.TechnologyPortfolio
-import com.company.techportfolio.shared.domain.model.Technology
-import com.company.techportfolio.shared.domain.model.PortfolioType
-import com.company.techportfolio.shared.domain.model.PortfolioStatus
-import com.company.techportfolio.shared.domain.model.TechnologyType
-import com.company.techportfolio.shared.domain.model.MaturityLevel
-import com.company.techportfolio.shared.domain.model.RiskLevel
-import com.company.techportfolio.shared.domain.port.EventPublisher
+import com.company.techportfolio.portfolio.domain.port.TechnologyRepository
 import com.company.techportfolio.shared.domain.event.PortfolioCreatedEvent
 import com.company.techportfolio.shared.domain.event.PortfolioUpdatedEvent
 import com.company.techportfolio.shared.domain.event.TechnologyAddedEvent
 import com.company.techportfolio.shared.domain.event.TechnologyRemovedEvent
-import io.mockk.*
+import com.company.techportfolio.shared.domain.model.*
+import com.company.techportfolio.shared.domain.port.EventPublisher
+import io.mockk.clearAllMocks
+import io.mockk.every
+import io.mockk.mockk
+import io.mockk.verify
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import reactor.core.publisher.Flux
+import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.LocalDateTime
-import org.junit.jupiter.api.Assertions.*
 
+/**
+ * Comprehensive unit tests for PortfolioService.
+ *
+ * This test class verifies the business logic implemented in the PortfolioService class,
+ * which is the core domain service for portfolio management. The tests use MockK to mock
+ * dependencies and verify interactions with repositories and event publishers.
+ *
+ * ## Test Coverage:
+ * - Portfolio CRUD operations
+ * - Technology management within portfolios
+ * - Error handling and validation
+ * - Event publishing for domain events
+ * - Business rule enforcement
+ * - Query operations and filtering
+ *
+ * ## Test Structure:
+ * Each test focuses on a specific method or use case, following the
+ * Given-When-Then pattern for clear test organization and readability.
+ *
+ * @author Technology Portfolio Team
+ * @since 1.0.0
+ * @see PortfolioService
+ */
 class PortfolioServiceTest {
 
-    private lateinit var portfolioService: PortfolioService
-    private lateinit var portfolioRepository: PortfolioRepository
-    private lateinit var technologyRepository: TechnologyRepository
-    private lateinit var portfolioQueryRepository: PortfolioQueryRepository
-    private lateinit var technologyQueryRepository: TechnologyQueryRepository
-    private lateinit var eventPublisher: EventPublisher
+    /**
+     * Mock repository for portfolio persistence operations.
+     */
+    private val portfolioRepository = mockk<PortfolioRepository>()
 
+    /**
+     * Mock repository for technology persistence operations.
+     */
+    private val technologyRepository = mockk<TechnologyRepository>()
+
+    /**
+     * Mock repository for optimized portfolio query operations.
+     */
+    private val portfolioQueryRepository = mockk<PortfolioQueryRepository>()
+
+    /**
+     * Mock repository for optimized technology query operations.
+     */
+    private val technologyQueryRepository = mockk<TechnologyQueryRepository>()
+
+    /**
+     * Mock event publisher for domain events.
+     */
+    private val eventPublisher = mockk<EventPublisher>()
+
+    /**
+     * The service under test.
+     */
+    private lateinit var portfolioService: PortfolioService
+
+    /**
+     * Fixed test date/time for consistent testing.
+     */
+    private val testDateTime = LocalDateTime.of(2024, 1, 15, 10, 30, 0)
+
+    /**
+     * Set up the test environment before each test.
+     *
+     * Clears all mock interactions and creates a fresh instance of the
+     * PortfolioService with mock dependencies for each test.
+     */
     @BeforeEach
     fun setUp() {
-        portfolioRepository = mockk()
-        technologyRepository = mockk()
-        portfolioQueryRepository = mockk()
-        technologyQueryRepository = mockk()
-        eventPublisher = mockk(relaxed = true)
-
+        clearAllMocks()
         portfolioService = PortfolioService(
             portfolioRepository,
             technologyRepository,
@@ -51,6 +103,15 @@ class PortfolioServiceTest {
         )
     }
 
+    /**
+     * Tests successful portfolio creation.
+     *
+     * Verifies that the service correctly:
+     * 1. Checks for existing portfolios with the same name
+     * 2. Saves the new portfolio to the repository
+     * 3. Publishes a PortfolioCreatedEvent
+     * 4. Returns a complete PortfolioResponse with correct data
+     */
     @Test
     fun `createPortfolio should create portfolio successfully`() {
         // Given
@@ -58,83 +119,218 @@ class PortfolioServiceTest {
             name = "Test Portfolio",
             description = "Test Description",
             type = PortfolioType.ENTERPRISE,
-            ownerId = 1L,
-            organizationId = 100L
+            ownerId = 100L,
+            organizationId = 200L
         )
+        val savedPortfolio = createTestPortfolio(1L, "Test Portfolio")
 
-        val portfolio = TechnologyPortfolio(
-            id = 1L,
-            name = request.name,
-            description = request.description,
-            type = request.type,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = request.ownerId,
-            organizationId = request.organizationId
-        )
-
-        every { portfolioRepository.findByName(request.name) } returns null
-        every { portfolioRepository.save(any()) } returns portfolio
-        every { technologyRepository.findByPortfolioId(1L) } returns emptyList()
+        every { portfolioRepository.findByName("Test Portfolio") } returns Mono.empty()
+        every { portfolioRepository.save(any()) } returns Mono.just(savedPortfolio)
+        every { technologyRepository.findByPortfolioId(1L) } returns Flux.empty()
+        every { eventPublisher.publish(any<PortfolioCreatedEvent>()) } returns Mono.empty()
 
         // When
-        val result = portfolioService.createPortfolio(request)
+        val result = portfolioService.createPortfolio(request).block()!!
 
         // Then
-        assertNotNull(result)
         assertEquals(1L, result.id)
-        assertEquals(request.name, result.name)
-        assertEquals(request.description, result.description)
-        assertEquals(request.type, result.type)
+        assertEquals("Test Portfolio", result.name)
+        assertEquals("Test Description", result.description)
+        assertEquals(PortfolioType.ENTERPRISE, result.type)
         assertEquals(PortfolioStatus.ACTIVE, result.status)
-        assertEquals(0, result.technologyCount)
+        assertEquals(100L, result.ownerId)
+        assertEquals(200L, result.organizationId)
 
-        verify {
-            portfolioRepository.findByName(request.name)
-            portfolioRepository.save(any())
-            eventPublisher.publish(any<PortfolioCreatedEvent>())
-        }
+        verify { portfolioRepository.findByName("Test Portfolio") }
+        verify { portfolioRepository.save(any()) }
+        verify { eventPublisher.publish(any<PortfolioCreatedEvent>()) }
     }
 
+    /**
+     * Tests portfolio creation with duplicate name.
+     *
+     * Verifies that the service correctly:
+     * 1. Checks for existing portfolios with the same name
+     * 2. Throws an appropriate exception when a duplicate is found
+     * 3. Does not attempt to save the portfolio or publish events
+     */
     @Test
-    fun `createPortfolio should throw exception when portfolio with same name exists`() {
+    fun `createPortfolio should throw RuntimeException when name already exists`() {
         // Given
         val request = CreatePortfolioRequest(
-            name = "Test Portfolio",
-            description = "Test Description",
+            name = "Existing Portfolio",
             type = PortfolioType.ENTERPRISE,
-            ownerId = 1L
+            ownerId = 100L
         )
+        val existingPortfolio = createTestPortfolio(1L, "Existing Portfolio")
 
-        val existingPortfolio = TechnologyPortfolio(
-            id = 1L,
-            name = request.name,
-            description = "Existing Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 2L
-        )
-
-        every { portfolioRepository.findByName(request.name) } returns existingPortfolio
+        every { portfolioRepository.findByName("Existing Portfolio") } returns Mono.just(existingPortfolio)
 
         // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.createPortfolio(request)
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.createPortfolio(request).block()
         }
-        assertTrue(exception.message!!.contains("already exists"))
 
-        verify {
-            portfolioRepository.findByName(request.name)
-        }
-        verify(exactly = 0) {
-            portfolioRepository.save(any())
-            eventPublisher.publish(any<PortfolioCreatedEvent>())
-        }
+        assertTrue(exception.message!!.contains("Portfolio with name 'Existing Portfolio' already exists"))
+
+        verify { portfolioRepository.findByName("Existing Portfolio") }
+        verify(exactly = 0) { portfolioRepository.save(any()) }
+        verify(exactly = 0) { eventPublisher.publish(any()) }
     }
 
+    /**
+     * Tests retrieving a portfolio by ID when it exists.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the portfolio from the repository
+     * 2. Fetches associated technologies
+     * 3. Returns a complete PortfolioResponse with correct data
+     */
+    @Test
+    fun `getPortfolio should return portfolio when found`() {
+        // Given
+        val portfolioId = 1L
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
+        val technologies = emptyList<Technology>()
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.findByPortfolioId(portfolioId) } returns Flux.fromIterable(technologies)
+
+        // When
+        val result = portfolioService.getPortfolio(portfolioId).block()!!
+
+        // Then
+        assertEquals(portfolioId, result.id)
+        assertEquals("Test Portfolio", result.name)
+        assertEquals(0, result.technologyCount)
+        assertEquals(0, result.technologies.size)
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.findByPortfolioId(portfolioId) }
+    }
+
+    /**
+     * Tests retrieving a portfolio by ID when it doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the portfolio from the repository
+     * 2. Throws an appropriate exception when the portfolio is not found
+     */
+    @Test
+    fun `getPortfolio should throw IllegalArgumentException when not found`() {
+        // Given
+        val portfolioId = 999L
+        every { portfolioRepository.findById(portfolioId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.getPortfolio(portfolioId).block()
+        }
+
+        assertEquals("Portfolio with id $portfolioId not found", exception.message)
+        verify { portfolioRepository.findById(portfolioId) }
+    }
+
+    /**
+     * Tests retrieving portfolios by owner ID.
+     *
+     * Verifies that the service correctly:
+     * 1. Delegates to the query repository for optimized retrieval
+     * 2. Returns the list of portfolio summaries for the specified owner
+     */
+    @Test
+    fun `getPortfoliosByOwner should return owner portfolios`() {
+        // Given
+        val ownerId = 100L
+        val summaries = listOf(
+            createTestPortfolioSummary(1L, "Portfolio 1"),
+            createTestPortfolioSummary(2L, "Portfolio 2")
+        )
+
+        every { portfolioQueryRepository.findPortfolioSummariesByOwner(ownerId) } returns Flux.fromIterable(summaries)
+
+        // When
+        val result = portfolioService.getPortfoliosByOwner(ownerId).collectList().block()!!
+
+        // Then
+        assertEquals(2, result.size)
+        assertEquals("Portfolio 1", result[0].name)
+        assertEquals("Portfolio 2", result[1].name)
+
+        verify { portfolioQueryRepository.findPortfolioSummariesByOwner(ownerId) }
+    }
+
+    /**
+     * Tests retrieving portfolios by organization ID.
+     *
+     * Verifies that the service correctly:
+     * 1. Delegates to the query repository for optimized retrieval
+     * 2. Returns the list of portfolio summaries for the specified organization
+     */
+    @Test
+    fun `getPortfoliosByOrganization should return organization portfolios`() {
+        // Given
+        val organizationId = 200L
+        val summaries = listOf(createTestPortfolioSummary(1L, "Org Portfolio"))
+
+        every { portfolioQueryRepository.findPortfolioSummariesByOrganization(organizationId) } returns Flux.fromIterable(
+            summaries
+        )
+
+        // When
+        val result = portfolioService.getPortfoliosByOrganization(organizationId).collectList().block()!!
+
+        // Then
+        assertEquals(1, result.size)
+        assertEquals("Org Portfolio", result[0].name)
+
+        verify { portfolioQueryRepository.findPortfolioSummariesByOrganization(organizationId) }
+    }
+
+    /**
+     * Tests searching portfolios with multiple criteria.
+     *
+     * Verifies that the service correctly:
+     * 1. Delegates to the query repository with all search parameters
+     * 2. Returns the filtered list of portfolio summaries
+     */
+    @Test
+    fun `searchPortfolios should return filtered portfolios`() {
+        // Given
+        val name = "test"
+        val type = PortfolioType.ENTERPRISE
+        val status = PortfolioStatus.ACTIVE
+        val organizationId = 200L
+        val summaries = listOf(createTestPortfolioSummary(1L, "Test Portfolio"))
+
+        every {
+            portfolioQueryRepository.searchPortfolios(
+                name,
+                type,
+                status,
+                organizationId
+            )
+        } returns Flux.fromIterable(summaries)
+
+        // When
+        val result = portfolioService.searchPortfolios(name, type, status, organizationId).collectList().block()!!
+
+        // Then
+        assertEquals(1, result.size)
+        assertEquals("Test Portfolio", result[0].name)
+
+        verify { portfolioQueryRepository.searchPortfolios(name, type, status, organizationId) }
+    }
+
+    /**
+     * Tests successful portfolio update.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the existing portfolio from the repository
+     * 2. Updates the portfolio with the new data
+     * 3. Publishes a PortfolioUpdatedEvent
+     * 4. Returns a complete PortfolioResponse with updated data
+     */
     @Test
     fun `updatePortfolio should update portfolio successfully`() {
         // Given
@@ -142,425 +338,623 @@ class PortfolioServiceTest {
         val request = UpdatePortfolioRequest(
             name = "Updated Portfolio",
             description = "Updated Description",
+            type = PortfolioType.DEPARTMENTAL,
             status = PortfolioStatus.ARCHIVED
         )
-
-        val existingPortfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Original Name",
-            description = "Original Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
-
+        val existingPortfolio = createTestPortfolio(portfolioId, "Original Portfolio")
         val updatedPortfolio = existingPortfolio.copy(
-            name = request.name!!,
-            description = request.description!!,
-            status = request.status!!,
+            name = "Updated Portfolio",
+            description = "Updated Description",
+            type = PortfolioType.DEPARTMENTAL,
+            status = PortfolioStatus.ARCHIVED,
             updatedAt = LocalDateTime.now()
         )
 
-        every { portfolioRepository.findById(portfolioId) } returns existingPortfolio
-        every { portfolioRepository.update(any()) } returns updatedPortfolio
-        every { technologyRepository.findByPortfolioId(portfolioId) } returns emptyList()
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(existingPortfolio)
+        every { portfolioRepository.update(any()) } returns Mono.just(updatedPortfolio)
+        every { technologyRepository.findByPortfolioId(portfolioId) } returns Flux.empty()
+        every { eventPublisher.publish(any<PortfolioUpdatedEvent>()) } returns Mono.empty()
 
         // When
-        val result = portfolioService.updatePortfolio(portfolioId, request)
+        val result = portfolioService.updatePortfolio(portfolioId, request).block()!!
 
         // Then
-        assertNotNull(result)
         assertEquals(portfolioId, result.id)
-        assertEquals(request.name, result.name)
-        assertEquals(request.description, result.description)
-        assertEquals(request.status, result.status)
+        assertEquals("Updated Portfolio", result.name)
+        assertEquals("Updated Description", result.description)
+        assertEquals(PortfolioType.DEPARTMENTAL, result.type)
+        assertEquals(PortfolioStatus.ARCHIVED, result.status)
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-            portfolioRepository.update(any())
-            eventPublisher.publish(any<PortfolioUpdatedEvent>())
-        }
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { portfolioRepository.update(any()) }
+        verify { eventPublisher.publish(any<PortfolioUpdatedEvent>()) }
     }
 
+    /**
+     * Tests portfolio update when the portfolio doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the portfolio from the repository
+     * 2. Throws an appropriate exception when the portfolio is not found
+     * 3. Does not attempt to update the portfolio or publish events
+     */
     @Test
-    fun `updatePortfolio should throw exception when portfolio not found`() {
+    fun `updatePortfolio should throw RuntimeException when portfolio not found`() {
         // Given
         val portfolioId = 999L
         val request = UpdatePortfolioRequest(name = "Updated Portfolio")
 
-        every { portfolioRepository.findById(portfolioId) } returns null
+        every { portfolioRepository.findById(portfolioId) } returns Mono.empty()
 
         // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.updatePortfolio(portfolioId, request)
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.updatePortfolio(portfolioId, request).block()
         }
-        assertTrue(exception.message!!.contains("not found"))
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-        }
-        verify(exactly = 0) {
-            portfolioRepository.update(any())
-            eventPublisher.publish(any<PortfolioUpdatedEvent>())
-        }
+        assertTrue(exception.message!!.contains("Portfolio with id $portfolioId not found"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify(exactly = 0) { portfolioRepository.update(any()) }
     }
 
+    /**
+     * Tests successful portfolio deletion when the portfolio is empty.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the portfolio from the repository
+     * 2. Checks that the portfolio has no technologies
+     * 3. Deletes the portfolio from the repository
+     * 4. Returns true to indicate successful deletion
+     */
     @Test
-    fun `addTechnology should add technology to portfolio successfully`() {
+    fun `deletePortfolio should delete portfolio successfully when empty`() {
         // Given
         val portfolioId = 1L
-        val request = AddTechnologyRequest(
-            name = "Test Technology",
-            description = "Test Technology Description",
-            type = TechnologyType.DATABASE,
-            maturityLevel = MaturityLevel.PRODUCTION,
-            riskLevel = RiskLevel.LOW,
-            annualCost = BigDecimal("1000.00"),
-            vendorName = "Test Vendor",
-            version = "1.0.0",
-            category = "Database"
-        )
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
 
-        val portfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Test Portfolio",
-            description = "Test Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
-
-        val technology = Technology(
-            id = 1L,
-            name = request.name,
-            description = request.description,
-            category = request.category,
-            type = request.type,
-            maturityLevel = request.maturityLevel,
-            riskLevel = request.riskLevel,
-            annualCost = request.annualCost,
-            vendorName = request.vendorName,
-            version = request.version,
-            portfolioId = portfolioId,
-            isActive = true,
-            createdAt = LocalDateTime.now()
-        )
-
-        every { portfolioRepository.findById(portfolioId) } returns portfolio
-        every { technologyRepository.save(any()) } returns technology
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.countByPortfolioId(portfolioId) } returns Mono.just(0L)
+        every { portfolioRepository.delete(portfolioId) } returns Mono.just(true)
 
         // When
-        val result = portfolioService.addTechnology(portfolioId, request)
-
-        // Then
-        assertNotNull(result)
-        assertEquals(1L, result.id)
-        assertEquals(request.name, result.name)
-        assertEquals(request.description, result.description)
-        assertEquals(request.type, result.type)
-        assertEquals(request.maturityLevel, result.maturityLevel)
-        assertEquals(request.riskLevel, result.riskLevel)
-        assertEquals(request.annualCost, result.annualCost)
-        assertEquals(request.vendorName, result.vendorName)
-        assertEquals(request.version, result.version)
-
-        verify {
-            portfolioRepository.findById(portfolioId)
-            technologyRepository.save(any())
-            eventPublisher.publish(any<TechnologyAddedEvent>())
-        }
-    }
-
-    @Test
-    fun `addTechnology should throw exception when portfolio not found`() {
-        // Given
-        val portfolioId = 999L
-        val request = AddTechnologyRequest(
-            name = "Test Technology",
-            description = "Test Technology Description",
-            type = TechnologyType.DATABASE,
-            maturityLevel = MaturityLevel.PRODUCTION,
-            riskLevel = RiskLevel.LOW,
-            annualCost = BigDecimal("1000.00"),
-            vendorName = "Test Vendor",
-            version = "1.0.0",
-            category = "Database"
-        )
-
-        every { portfolioRepository.findById(portfolioId) } returns null
-
-        // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.addTechnology(portfolioId, request)
-        }
-        assertTrue(exception.message!!.contains("not found"))
-
-        verify {
-            portfolioRepository.findById(portfolioId)
-        }
-        verify(exactly = 0) {
-            technologyRepository.save(any())
-            eventPublisher.publish(any<TechnologyAddedEvent>())
-        }
-    }
-
-    @Test
-    fun `removeTechnology should remove technology from portfolio successfully`() {
-        // Given
-        val portfolioId = 1L
-        val technologyId = 1L
-
-        val portfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Test Portfolio",
-            description = "Test Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
-
-        val technology = Technology(
-            id = technologyId,
-            name = "Test Technology",
-            description = "Test Technology Description",
-            category = "Database",
-            type = TechnologyType.DATABASE,
-            maturityLevel = MaturityLevel.PRODUCTION,
-            riskLevel = RiskLevel.LOW,
-            annualCost = BigDecimal("1000.00"),
-            vendorName = "Test Vendor",
-            version = "1.0.0",
-            portfolioId = portfolioId,
-            isActive = true,
-            createdAt = LocalDateTime.now()
-        )
-
-        every { portfolioRepository.findById(portfolioId) } returns portfolio
-        every { technologyRepository.findById(technologyId) } returns technology
-        every { technologyRepository.delete(technologyId) } returns true
-
-        // When
-        val result = portfolioService.removeTechnology(portfolioId, technologyId)
+        val result = portfolioService.deletePortfolio(portfolioId).block()!!
 
         // Then
         assertTrue(result)
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-            technologyRepository.findById(technologyId)
-            technologyRepository.delete(technologyId)
-            eventPublisher.publish(any<TechnologyRemovedEvent>())
-        }
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.countByPortfolioId(portfolioId) }
+        verify { portfolioRepository.delete(portfolioId) }
     }
 
+    /**
+     * Tests portfolio deletion when the portfolio contains technologies.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the portfolio from the repository
+     * 2. Checks that the portfolio has technologies
+     * 3. Throws an appropriate exception to prevent deletion
+     * 4. Does not attempt to delete the portfolio
+     */
     @Test
-    fun `removeTechnology should throw exception when portfolio not found`() {
+    fun `deletePortfolio should throw RuntimeException when portfolio has technologies`() {
         // Given
-        val portfolioId = 999L
-        val technologyId = 1L
+        val portfolioId = 1L
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
 
-        every { portfolioRepository.findById(portfolioId) } returns null
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.countByPortfolioId(portfolioId) } returns Mono.just(3L)
 
         // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.removeTechnology(portfolioId, technologyId)
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.deletePortfolio(portfolioId).block()
         }
-        assertTrue(exception.message!!.contains("not found"))
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-        }
-        verify(exactly = 0) {
-            technologyRepository.findById(any())
-            technologyRepository.delete(any())
-            eventPublisher.publish(any<TechnologyRemovedEvent>())
-        }
+        assertTrue(exception.message!!.contains("Cannot delete portfolio with technologies"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.countByPortfolioId(portfolioId) }
+        verify(exactly = 0) { portfolioRepository.delete(any()) }
     }
 
+    /**
+     * Tests portfolio deletion when the portfolio doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the portfolio from the repository
+     * 2. Throws an appropriate exception when the portfolio is not found
+     * 3. Does not attempt to check technology count or delete the portfolio
+     */
     @Test
-    fun `removeTechnology should throw exception when technology not found`() {
+    fun `deletePortfolio should throw RuntimeException when portfolio not found`() {
+        // Given
+        val portfolioId = 999L
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.deletePortfolio(portfolioId).block()
+        }
+
+        assertTrue(exception.message!!.contains("Portfolio with id $portfolioId not found"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify(exactly = 0) { technologyRepository.countByPortfolioId(any()) }
+    }
+
+    /**
+     * Tests successful technology addition to a portfolio.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the portfolio from the repository
+     * 2. Saves the new technology to the repository
+     * 3. Publishes a TechnologyAddedEvent
+     * 4. Returns a complete TechnologyResponse with correct data
+     */
+    @Test
+    fun `addTechnology should add technology successfully`() {
+        // Given
+        val portfolioId = 1L
+        val request = AddTechnologyRequest(
+            name = "Spring Boot",
+            description = "Java framework",
+            category = "Framework",
+            version = "3.2.0",
+            type = TechnologyType.FRAMEWORK,
+            maturityLevel = MaturityLevel.MATURE,
+            riskLevel = RiskLevel.LOW,
+            annualCost = BigDecimal("5000.00"),
+            licenseCost = BigDecimal("1000.00"),
+            maintenanceCost = BigDecimal("500.00"),
+            vendorName = "VMware",
+            vendorContact = "support@vmware.com",
+            supportContractExpiry = testDateTime.plusYears(1)
+        )
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
+        val savedTechnology = Technology(
+            id = 1L,
+            name = "Spring Boot",
+            description = "Java framework", // Match the request description
+            category = "Framework",
+            version = "3.2.0",
+            type = TechnologyType.FRAMEWORK,
+            maturityLevel = MaturityLevel.MATURE,
+            riskLevel = RiskLevel.LOW,
+            annualCost = BigDecimal("5000.00"),
+            licenseCost = BigDecimal("1000.00"),
+            maintenanceCost = BigDecimal("500.00"),
+            vendorName = "VMware",
+            vendorContact = "support@vmware.com",
+            supportContractExpiry = testDateTime.plusYears(1),
+            isActive = true,
+            createdAt = testDateTime,
+            updatedAt = testDateTime,
+            portfolioId = portfolioId
+        )
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.save(any()) } returns Mono.just(savedTechnology)
+        every { eventPublisher.publish(any<TechnologyAddedEvent>()) } returns Mono.empty()
+
+        // When
+        val result = portfolioService.addTechnology(portfolioId, request).block()!!
+
+        // Then
+        assertEquals(1L, result.id)
+        assertEquals("Spring Boot", result.name)
+        assertEquals("Java framework", result.description)
+        assertEquals("Framework", result.category)
+        assertEquals("3.2.0", result.version)
+        assertEquals(TechnologyType.FRAMEWORK, result.type)
+        assertEquals(MaturityLevel.MATURE, result.maturityLevel)
+        assertEquals(RiskLevel.LOW, result.riskLevel)
+        assertEquals(BigDecimal("5000.00"), result.annualCost)
+        assertEquals("VMware", result.vendorName)
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.save(any()) }
+        verify { eventPublisher.publish(any<TechnologyAddedEvent>()) }
+    }
+
+    /**
+     * Tests technology addition when the portfolio doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the portfolio from the repository
+     * 2. Throws an appropriate exception when the portfolio is not found
+     * 3. Does not attempt to save the technology or publish events
+     */
+    @Test
+    fun `addTechnology should throw RuntimeException when portfolio not found`() {
+        // Given
+        val portfolioId = 999L
+        val request = AddTechnologyRequest(
+            name = "Spring Boot",
+            category = "Framework",
+            type = TechnologyType.FRAMEWORK,
+            maturityLevel = MaturityLevel.MATURE,
+            riskLevel = RiskLevel.LOW
+        )
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.addTechnology(portfolioId, request).block()
+        }
+
+        assertTrue(exception.message!!.contains("Portfolio with id $portfolioId not found"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify(exactly = 0) { technologyRepository.save(any()) }
+    }
+
+    /**
+     * Tests retrieving a technology by ID when it exists.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the technology from the repository
+     * 2. Returns a complete TechnologyResponse with correct data
+     */
+    @Test
+    fun `getTechnology should return technology when found`() {
+        // Given
+        val technologyId = 1L
+        val technology = createTestTechnology(technologyId, "Spring Boot", 1L)
+
+        every { technologyRepository.findById(technologyId) } returns Mono.just(technology)
+
+        // When
+        val result = portfolioService.getTechnology(technologyId).block()!!
+
+        // Then
+        assertEquals(technologyId, result.id)
+        assertEquals("Spring Boot", result.name)
+        assertEquals("Framework", result.category)
+        assertEquals(TechnologyType.FRAMEWORK, result.type)
+
+        verify { technologyRepository.findById(technologyId) }
+    }
+
+    /**
+     * Tests retrieving a technology by ID when it doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the technology from the repository
+     * 2. Throws an appropriate exception when the technology is not found
+     */
+    @Test
+    fun `getTechnology should throw IllegalArgumentException when not found`() {
+        // Given
+        val technologyId = 999L
+
+        every { technologyRepository.findById(technologyId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.getTechnology(technologyId).block()
+        }
+
+        assertEquals("Technology with id $technologyId not found", exception.message)
+        verify { technologyRepository.findById(technologyId) }
+    }
+
+    /**
+     * Tests retrieving technologies by portfolio ID.
+     *
+     * Verifies that the service correctly:
+     * 1. Delegates to the query repository for optimized retrieval
+     * 2. Returns the list of technology summaries for the specified portfolio
+     */
+    @Test
+    fun `getTechnologiesByPortfolio should return portfolio technologies`() {
+        // Given
+        val portfolioId = 1L
+        val summaries = listOf(
+            createTestTechnologySummary(1L, "Spring Boot"),
+            createTestTechnologySummary(2L, "PostgreSQL")
+        )
+
+        every { technologyQueryRepository.findTechnologySummariesByPortfolio(portfolioId) } returns Flux.fromIterable(
+            summaries
+        )
+
+        // When
+        val result = portfolioService.getTechnologiesByPortfolio(portfolioId).collectList().block()!!
+
+        // Then
+        assertEquals(2, result.size)
+        assertEquals("Spring Boot", result[0].name)
+        assertEquals("PostgreSQL", result[1].name)
+
+        verify { technologyQueryRepository.findTechnologySummariesByPortfolio(portfolioId) }
+    }
+
+    /**
+     * Tests successful technology update.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the existing technology from the repository
+     * 2. Updates the technology with the new data
+     * 3. Returns a complete TechnologyResponse with updated data
+     */
+    @Test
+    fun `updateTechnology should update technology successfully`() {
+        // Given
+        val technologyId = 1L
+        val request = UpdateTechnologyRequest(
+            name = "Updated Spring Boot",
+            description = "Updated description",
+            version = "3.3.0",
+            annualCost = BigDecimal("6000.00"),
+            riskLevel = RiskLevel.MEDIUM
+        )
+        val existingTechnology = createTestTechnology(technologyId, "Spring Boot", 1L)
+        val updatedTechnology = existingTechnology.copy(
+            name = "Updated Spring Boot",
+            description = "Updated description",
+            version = "3.3.0",
+            annualCost = BigDecimal("6000.00"),
+            riskLevel = RiskLevel.MEDIUM,
+            updatedAt = LocalDateTime.now()
+        )
+
+        every { technologyRepository.findById(technologyId) } returns Mono.just(existingTechnology)
+        every { technologyRepository.update(any()) } returns Mono.just(updatedTechnology)
+
+        // When
+        val result = portfolioService.updateTechnology(technologyId, request).block()!!
+
+        // Then
+        assertEquals(technologyId, result.id)
+        assertEquals("Updated Spring Boot", result.name)
+        assertEquals("Updated description", result.description)
+        assertEquals("3.3.0", result.version)
+        assertEquals(BigDecimal("6000.00"), result.annualCost)
+        assertEquals(RiskLevel.MEDIUM, result.riskLevel)
+
+        verify { technologyRepository.findById(technologyId) }
+        verify { technologyRepository.update(any()) }
+    }
+
+    /**
+     * Tests technology update when the technology doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the technology from the repository
+     * 2. Throws an appropriate exception when the technology is not found
+     * 3. Does not attempt to update the technology
+     */
+    @Test
+    fun `updateTechnology should throw RuntimeException when technology not found`() {
+        // Given
+        val technologyId = 999L
+        val request = UpdateTechnologyRequest(name = "Updated Technology")
+
+        every { technologyRepository.findById(technologyId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.updateTechnology(technologyId, request).block()
+        }
+
+        assertTrue(exception.message!!.contains("Technology with id $technologyId not found"))
+
+        verify { technologyRepository.findById(technologyId) }
+        verify(exactly = 0) { technologyRepository.update(any()) }
+    }
+
+    /**
+     * Tests successful technology removal from a portfolio.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves both the portfolio and technology from the repository
+     * 2. Validates that the technology belongs to the specified portfolio
+     * 3. Deletes the technology from the repository
+     * 4. Publishes a TechnologyRemovedEvent
+     * 5. Returns true to indicate successful removal
+     */
+    @Test
+    fun `removeTechnology should remove technology successfully`() {
+        // Given
+        val portfolioId = 1L
+        val technologyId = 10L
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
+        val technology = createTestTechnology(technologyId, "Spring Boot", portfolioId)
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.findById(technologyId) } returns Mono.just(technology)
+        every { technologyRepository.delete(technologyId) } returns Mono.just(true)
+        every { eventPublisher.publish(any<TechnologyRemovedEvent>()) } returns Mono.empty()
+
+        // When
+        val result = portfolioService.removeTechnology(portfolioId, technologyId).block()!!
+
+        // Then
+        assertTrue(result)
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.findById(technologyId) }
+        verify { technologyRepository.delete(technologyId) }
+        verify { eventPublisher.publish(any<TechnologyRemovedEvent>()) }
+    }
+
+    /**
+     * Tests technology removal when the portfolio doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Attempts to retrieve the portfolio from the repository
+     * 2. Throws an appropriate exception when the portfolio is not found
+     * 3. Does not attempt to retrieve or delete the technology
+     */
+    @Test
+    fun `removeTechnology should throw RuntimeException when portfolio not found`() {
+        // Given
+        val portfolioId = 999L
+        val technologyId = 10L
+
+        every { portfolioRepository.findById(portfolioId) } returns Mono.empty()
+        every { technologyRepository.findById(technologyId) } returns Mono.empty()
+
+        // When & Then
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.removeTechnology(portfolioId, technologyId).block()
+        }
+
+        assertTrue(exception.message!!.contains("Portfolio with id $portfolioId or Technology with id $technologyId not found"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.findById(technologyId) }
+    }
+
+    /**
+     * Tests technology removal when the technology doesn't exist.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves the portfolio from the repository
+     * 2. Attempts to retrieve the technology from the repository
+     * 3. Throws an appropriate exception when the technology is not found
+     * 4. Does not attempt to delete the technology
+     */
+    @Test
+    fun `removeTechnology should throw RuntimeException when technology not found`() {
         // Given
         val portfolioId = 1L
         val technologyId = 999L
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
 
-        val portfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Test Portfolio",
-            description = "Test Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
-
-        every { portfolioRepository.findById(portfolioId) } returns portfolio
-        every { technologyRepository.findById(technologyId) } returns null
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.findById(technologyId) } returns Mono.empty()
 
         // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.removeTechnology(portfolioId, technologyId)
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.removeTechnology(portfolioId, technologyId).block()
         }
-        assertTrue(exception.message!!.contains("not found"))
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-            technologyRepository.findById(technologyId)
-        }
-        verify(exactly = 0) {
-            technologyRepository.delete(any())
-            eventPublisher.publish(any<TechnologyRemovedEvent>())
-        }
+        assertTrue(exception.message!!.contains("Portfolio with id $portfolioId or Technology with id $technologyId not found"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.findById(technologyId) }
+        verify(exactly = 0) { technologyRepository.delete(any()) }
     }
 
+    /**
+     * Tests technology removal when the technology belongs to a different portfolio.
+     *
+     * Verifies that the service correctly:
+     * 1. Retrieves both the portfolio and technology from the repository
+     * 2. Validates that the technology belongs to the specified portfolio
+     * 3. Throws an appropriate exception when the technology belongs to a different portfolio
+     * 4. Does not attempt to delete the technology
+     */
     @Test
-    fun `removeTechnology should throw exception when technology belongs to different portfolio`() {
+    fun `removeTechnology should throw RuntimeException when technology belongs to different portfolio`() {
         // Given
         val portfolioId = 1L
-        val technologyId = 1L
+        val technologyId = 10L
+        val portfolio = createTestPortfolio(portfolioId, "Test Portfolio")
+        val technology = createTestTechnology(technologyId, "Spring Boot", 2L) // Different portfolio
 
-        val portfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Test Portfolio",
-            description = "Test Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
-
-        val technology = Technology(
-            id = technologyId,
-            name = "Test Technology",
-            description = "Test Technology Description",
-            category = "Database",
-            type = TechnologyType.DATABASE,
-            maturityLevel = MaturityLevel.PRODUCTION,
-            riskLevel = RiskLevel.LOW,
-            annualCost = BigDecimal("1000.00"),
-            vendorName = "Test Vendor",
-            version = "1.0.0",
-            portfolioId = 999L, // Different portfolio
-            isActive = true,
-            createdAt = LocalDateTime.now()
-        )
-
-        every { portfolioRepository.findById(portfolioId) } returns portfolio
-        every { technologyRepository.findById(technologyId) } returns technology
+        every { portfolioRepository.findById(portfolioId) } returns Mono.just(portfolio)
+        every { technologyRepository.findById(technologyId) } returns Mono.just(technology)
 
         // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.removeTechnology(portfolioId, technologyId)
+        val exception = assertThrows<IllegalArgumentException> {
+            portfolioService.removeTechnology(portfolioId, technologyId).block()
         }
-        assertTrue(exception.message!!.contains("does not belong"))
 
-        verify {
-            portfolioRepository.findById(portfolioId)
-            technologyRepository.findById(technologyId)
-        }
-        verify(exactly = 0) {
-            technologyRepository.delete(any())
-            eventPublisher.publish(any<TechnologyRemovedEvent>())
-        }
+        assertTrue(exception.message!!.contains("Technology does not belong to the specified portfolio"))
+
+        verify { portfolioRepository.findById(portfolioId) }
+        verify { technologyRepository.findById(technologyId) }
+        verify(exactly = 0) { technologyRepository.delete(any()) }
     }
 
-    @Test
-    fun `getPortfolio should return portfolio with technologies`() {
-        // Given
-        val portfolioId = 1L
+    // Helper Methods
+    /**
+     * Creates a test TechnologyPortfolio instance with the specified ID and name.
+     *
+     * @param id The portfolio ID
+     * @param name The portfolio name
+     * @return A test TechnologyPortfolio instance
+     */
+    private fun createTestPortfolio(id: Long, name: String) = TechnologyPortfolio(
+        id = id,
+        name = name,
+        description = "Test Description",
+        type = PortfolioType.ENTERPRISE,
+        status = PortfolioStatus.ACTIVE,
+        isActive = true,
+        createdAt = testDateTime,
+        updatedAt = testDateTime,
+        ownerId = 100L,
+        organizationId = 200L
+    )
 
-        val portfolio = TechnologyPortfolio(
-            id = portfolioId,
-            name = "Test Portfolio",
-            description = "Test Description",
-            type = PortfolioType.ENTERPRISE,
-            status = PortfolioStatus.ACTIVE,
-            isActive = true,
-            createdAt = LocalDateTime.now(),
-            ownerId = 1L
-        )
+    /**
+     * Creates a test PortfolioSummary instance with the specified ID and name.
+     *
+     * @param id The portfolio ID
+     * @param name The portfolio name
+     * @return A test PortfolioSummary instance
+     */
+    private fun createTestPortfolioSummary(id: Long, name: String) = PortfolioSummary(
+        id = id,
+        name = name,
+        type = PortfolioType.ENTERPRISE,
+        status = PortfolioStatus.ACTIVE,
+        ownerId = 100L,
+        organizationId = 200L,
+        technologyCount = 5,
+        totalAnnualCost = BigDecimal("10000.00"),
+        lastUpdated = testDateTime
+    )
 
-        val technologies = listOf(
-            Technology(
-                id = 1L,
-                name = "Technology 1",
-                description = "Description 1",
-                category = "Database",
-                type = TechnologyType.DATABASE,
-                maturityLevel = MaturityLevel.PRODUCTION,
-                riskLevel = RiskLevel.LOW,
-                annualCost = BigDecimal("1000.00"),
-                vendorName = "Vendor 1",
-                version = "1.0.0",
-                portfolioId = portfolioId,
-                isActive = true,
-                createdAt = LocalDateTime.now()
-            ),
-            Technology(
-                id = 2L,
-                name = "Technology 2",
-                description = "Description 2",
-                category = "Application",
-                type = TechnologyType.APPLICATION,
-                maturityLevel = MaturityLevel.DEVELOPMENT,
-                riskLevel = RiskLevel.MEDIUM,
-                annualCost = BigDecimal("2000.00"),
-                vendorName = "Vendor 2",
-                version = "2.0.0",
-                portfolioId = portfolioId,
-                isActive = true,
-                createdAt = LocalDateTime.now()
-            )
-        )
+    /**
+     * Creates a test Technology instance with the specified ID, name, and portfolio ID.
+     *
+     * @param id The technology ID
+     * @param name The technology name
+     * @param portfolioId The portfolio ID that owns this technology
+     * @return A test Technology instance
+     */
+    private fun createTestTechnology(id: Long, name: String, portfolioId: Long) = Technology(
+        id = id,
+        name = name,
+        description = "Test Technology",
+        category = "Framework",
+        version = "3.2.0",
+        type = TechnologyType.FRAMEWORK,
+        maturityLevel = MaturityLevel.MATURE,
+        riskLevel = RiskLevel.LOW,
+        annualCost = BigDecimal("5000.00"),
+        licenseCost = BigDecimal("1000.00"),
+        maintenanceCost = BigDecimal("500.00"),
+        vendorName = "VMware",
+        vendorContact = "support@vmware.com",
+        supportContractExpiry = testDateTime.plusYears(1),
+        isActive = true,
+        createdAt = testDateTime,
+        updatedAt = testDateTime,
+        portfolioId = portfolioId
+    )
 
-        every { portfolioRepository.findById(portfolioId) } returns portfolio
-        every { technologyRepository.findByPortfolioId(portfolioId) } returns technologies
-
-        // When
-        val result = portfolioService.getPortfolio(portfolioId)
-
-        // Then
-        assertNotNull(result)
-        assertEquals(portfolioId, result.id)
-        assertEquals(portfolio.name, result.name)
-        assertEquals(portfolio.description, result.description)
-        assertEquals(portfolio.type, result.type)
-        assertEquals(portfolio.status, result.status)
-        assertEquals(2, result.technologies.size)
-        assertEquals("Technology 1", result.technologies[0].name)
-        assertEquals("Technology 2", result.technologies[1].name)
-
-        verify {
-            portfolioRepository.findById(portfolioId)
-            technologyRepository.findByPortfolioId(portfolioId)
-        }
-    }
-
-    @Test
-    fun `getPortfolio should throw exception when portfolio not found`() {
-        // Given
-        val portfolioId = 999L
-
-        every { portfolioRepository.findById(portfolioId) } returns null
-
-        // When & Then
-        val exception = assertThrows<RuntimeException> {
-            portfolioService.getPortfolio(portfolioId)
-        }
-        assertTrue(exception.message!!.contains("not found"))
-
-        verify {
-            portfolioRepository.findById(portfolioId)
-        }
-        verify(exactly = 0) {
-            technologyRepository.findByPortfolioId(any())
-        }
-    }
+    /**
+     * Creates a test TechnologySummary instance with the specified ID and name.
+     *
+     * @param id The technology ID
+     * @param name The technology name
+     * @return A test TechnologySummary instance
+     */
+    private fun createTestTechnologySummary(id: Long, name: String) = TechnologySummary(
+        id = id,
+        name = name,
+        category = "Framework",
+        type = TechnologyType.FRAMEWORK,
+        maturityLevel = MaturityLevel.MATURE,
+        riskLevel = RiskLevel.LOW,
+        annualCost = BigDecimal("5000.00"),
+        vendorName = "VMware"
+    )
 } 

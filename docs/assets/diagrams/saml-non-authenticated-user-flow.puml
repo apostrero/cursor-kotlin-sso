@@ -1,0 +1,187 @@
+@startuml SAML - Non-Authenticated User Flow
+!theme plain
+title SAML - Non-Authenticated User Accessing Protected Resource (SimpleSAMLphp IdP)
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🆔 SimpleSAMLphp\nIdP (8081)" as IdP
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== Initial Request to Protected Resource ==
+User -> Browser: Navigate to protected resource\n(e.g., /api/portfolios)
+Browser -> Gateway: GET /api/portfolios
+activate Gateway
+
+Gateway -> Gateway: Check for JWT token in request
+note right: No JWT token found in\nAuthorization header or cookies
+
+Gateway -> Gateway: Check authentication mode
+note right: SAML authentication mode\nconfigured in docker-compose.yml
+
+Gateway -> Browser: 302 Redirect to SAML login\nLocation: /saml/login
+deactivate Gateway
+
+Browser -> User: Redirect to SAML login page
+
+== SAML Authentication Flow ==
+Browser -> Gateway: GET /saml/login
+activate Gateway
+
+Gateway -> Gateway: Generate SAML AuthnRequest
+Gateway -> Gateway: Create SAML request with SP entity ID
+note right: SAML AuthnRequest:\n- Issuer: http://localhost:8080\n- Destination: http://localhost:8081/simplesaml/saml2/idp/SSOService.php\n- RelayState: /api/portfolios
+
+Gateway -> Browser: 302 Redirect to SimpleSAMLphp IdP\nLocation: http://localhost:8081/simplesaml/saml2/idp/SSOService.php\n+SAMLRequest=<base64-encoded-request>
+deactivate Gateway
+
+Browser -> IdP: GET /simplesaml/saml2/idp/SSOService.php\nSAMLRequest=<base64-encoded-request>
+activate IdP
+
+IdP -> IdP: Decode and validate SAML AuthnRequest
+IdP -> IdP: Check SP entity ID in metadata
+IdP -> IdP: Display SAML login form
+
+IdP -> User: Show SAML login page\n(SimpleSAMLphp interface)
+
+User -> IdP: Enter SAML credentials\n(username: "user1", password: "password")
+IdP -> IdP: Validate SAML credentials
+note right: SAML validation:\n- Check against configured users\n- Validate password\n- Extract user attributes
+
+IdP -> IdP: Generate SAML Response
+note right: SAML Response:\n- Status: Success\n- NameID: user1@company.com\n- Attributes: {uid: "user1", email: "user1@company.com",\n  groups: ["portfolio-managers"]}\n- Destination: http://localhost:8080/saml/acs
+
+IdP -> Browser: 302 Redirect with SAML Response\nLocation: http://localhost:8080/saml/acs\n+SAMLResponse=<base64-encoded-response>
+deactivate IdP
+
+Browser -> User: Redirect with SAML response
+
+== SAML Response Processing ==
+Browser -> Gateway: POST /saml/acs\nContent-Type: application/x-www-form-urlencoded\nSAMLResponse=<base64-encoded-response>
+activate Gateway
+
+Gateway -> Gateway: Decode SAML Response
+Gateway -> Gateway: Validate SAML Response signature
+Gateway -> Gateway: Verify SAML Response against IdP metadata
+note right: SAML validation:\n- Check signature\n- Verify issuer\n- Validate timestamp\n- Check destination
+
+Gateway -> Gateway: Extract user attributes from SAML Response
+note right: Extracted attributes:\n- NameID: user1@company.com\n- uid: user1\n- email: user1@company.com\n- groups: ["portfolio-managers"]
+
+Gateway -> AuthService: POST /api/auth/saml-user\n{SAML attributes: {nameId, uid, email, groups}}
+activate AuthService
+
+AuthService -> AuthService: Process SAML user attributes
+AuthService -> AuthService: Map SAML groups to application roles
+note right: Role mapping:\n- portfolio-managers → ROLE_PORTFOLIO_MANAGER\n- viewers → ROLE_VIEWER\n- admins → ROLE_ADMIN
+
+AuthService -> AuthDB: Upsert user from SAML data\nINSERT INTO users (username, email, saml_name_id) \nVALUES (?, ?, ?) ON CONFLICT (saml_name_id) \nDO UPDATE SET username = ?, email = ?
+activate AuthDB
+AuthDB -> AuthService: Return user data\n{id: 1, username: "user1", email: "user1@company.com", saml_name_id: "user1@company.com"}
+deactivate AuthDB
+
+AuthService -> AuthDB: Assign roles to user\nINSERT INTO user_roles (user_id, role_id) \nSELECT ?, r.id FROM roles r \nWHERE r.name IN ('ROLE_PORTFOLIO_MANAGER')
+activate AuthDB
+AuthDB -> AuthService: Roles assigned successfully
+deactivate AuthDB
+
+AuthService -> AuthService: Generate JWT token with SAML user claims
+note right: JWT payload:\n{userId: 1, username: "user1",\nemail: "user1@company.com",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nsamlNameId: "user1@company.com",\nexp: <expiration>}
+
+AuthService -> Gateway: 200 OK\n{token: "<JWT>", user: {id: 1, username: "user1", email: "user1@company.com", roles: ["ROLE_PORTFOLIO_MANAGER"]}}
+deactivate AuthService
+
+Gateway -> Browser: 302 Redirect to original resource\nLocation: /api/portfolios\n+ Set JWT cookie: auth-token=<JWT>
+deactivate Gateway
+
+Browser -> Browser: Store JWT token in cookies
+Browser -> User: Redirect to original resource
+
+== Authenticated Request with SAML JWT ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Browser: Retrieve JWT token from cookies
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>\nCookie: auth-token=<JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token from Authorization header or cookies
+Gateway -> Gateway: Validate JWT signature and expiration
+note right: JWT is valid and not expired\nSAML-authenticated token
+
+Gateway -> Gateway: Extract user claims from JWT
+note right: Claims: {userId: 1, username: "user1",\nemail: "user1@company.com",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nsamlNameId: "user1@company.com"}
+
+== Authorization Check ==
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "GET"}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT token
+AuthService -> AuthService: Extract user ID from JWT (userId: 1)
+
+AuthService -> AuthDB: Query user permissions\nSELECT roles, permissions FROM users u\nJOIN user_roles ur ON u.id = ur.user_id\nJOIN roles r ON ur.role_id = r.id\nWHERE u.id = 1
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{roles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check if user has PORTFOLIO_READ permission
+note right: User has PORTFOLIO_READ permission\nfor /api/portfolios GET
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, username: "user1", email: "user1@company.com", roles: ["ROLE_PORTFOLIO_MANAGER"], permissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}}
+deactivate AuthService
+
+== Service Communication ==
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>\nX-User-ID: 1\nX-SAML-NameID: user1@company.com
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioService: Extract user ID from JWT (userId: 1)
+PortfolioService -> PortfolioService: Check user permissions for portfolio access
+
+PortfolioService -> PortfolioDB: SELECT * FROM portfolios\nWHERE owner_id = 1 OR is_public = true\nORDER BY created_at DESC
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data\n[{id: 1, name: "Enterprise Portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", ...}]
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Filter portfolios based on user permissions
+PortfolioService -> Gateway: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...}]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...}]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Error Scenarios ==
+note over User, PortfolioDB
+SAML Error Scenarios:
+1. Invalid SAML credentials → 401 Unauthorized
+2. SAML Response signature invalid → 401 Unauthorized
+3. SAML Response expired → 401 Unauthorized
+4. SAML IdP not available → 503 Service Unavailable
+5. SAML metadata mismatch → 500 Internal Server Error
+6. SAML user not found → 401 Unauthorized
+7. SAML attribute mapping failed → 500 Internal Server Error
+end note
+
+== SAML Configuration ==
+note over Gateway, IdP
+SAML Configuration (docker-compose.yml):
+services:
+  simplesamlphp:
+    image: kristophjunge/test-saml-idp
+    ports:
+      - "8081:8080"
+    environment:
+      - SIMPLESAMLPHP_SP_ENTITY_ID=http://localhost:8080
+      - SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE=http://localhost:8080/saml/acs
+      - SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE=http://localhost:8080/saml/logout
+
+SAML Users (configured in IdP):
+- user1/password (portfolio-managers group)
+- user2/password (viewers group)
+- admin/secret (admins group)
+end note
+
+@enduml 

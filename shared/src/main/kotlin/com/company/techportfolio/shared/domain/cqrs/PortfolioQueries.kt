@@ -1,12 +1,7 @@
 package com.company.techportfolio.shared.domain.cqrs
 
-import com.company.techportfolio.shared.domain.model.PortfolioType
-import com.company.techportfolio.shared.domain.model.PortfolioStatus
-import com.company.techportfolio.shared.domain.model.TechnologyType
-import com.company.techportfolio.shared.domain.model.MaturityLevel
-import com.company.techportfolio.shared.domain.model.RiskLevel
+import com.company.techportfolio.shared.domain.model.*
 import com.company.techportfolio.shared.domain.port.Query
-import java.math.BigDecimal
 
 // Portfolio Queries
 data class GetPortfolioQuery(
