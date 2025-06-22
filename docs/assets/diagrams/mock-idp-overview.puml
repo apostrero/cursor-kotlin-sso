@@ -1,0 +1,218 @@
+@startuml Mock IdP - Complete Authentication Flow Overview
+!theme plain
+title Mock IdP - Complete Authentication Flow Overview
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== Flow 1: Non-Authenticated User (Mock IdP) ==
+User -> Browser: Access protected resource
+Browser -> Gateway: GET /api/portfolios
+activate Gateway
+
+Gateway -> Gateway: Check for JWT token
+note right: No JWT found
+
+Gateway -> Gateway: Check authentication mode
+note right: Mock authentication mode\nconfigured in application-mock-auth.yml
+
+Gateway -> Browser: 401 Unauthorized\n+ Redirect to /mock-login
+deactivate Gateway
+
+Browser -> User: Show mock login page
+
+User -> Browser: View available test users
+Browser -> Gateway: GET /api/auth/mock-users
+activate Gateway
+
+Gateway -> AuthService: GET /api/auth/mock-users
+activate AuthService
+AuthService -> AuthService: Load mock user configuration
+AuthService -> Gateway: 200 OK\n{users: [{username, roles, email}]}
+deactivate AuthService
+
+Gateway -> Browser: 200 OK\n{users: [{username, roles, email}]}
+deactivate Gateway
+
+Browser -> User: Display test users:\n- user1 (Portfolio Manager)\n- user2 (Viewer)\n- admin (Administrator)
+
+User -> Browser: Select user and enter password
+Browser -> Gateway: POST /api/auth/mock-login\n{username, password}
+activate Gateway
+
+Gateway -> AuthService: POST /api/auth/validate\n{username, password}
+activate AuthService
+
+AuthService -> AuthService: Validate against mock config
+AuthService -> AuthService: Generate JWT token
+AuthService -> Gateway: 200 OK\n{JWT token, user info}
+deactivate AuthService
+
+Gateway -> Browser: 200 OK\n{JWT token, user info}
+deactivate Gateway
+
+Browser -> Browser: Store JWT token
+Browser -> User: Redirect to original resource
+
+== Flow 2: Authenticated User (Mock IdP) ==
+User -> Browser: Access protected resource
+Browser -> Browser: Retrieve JWT token
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate Gateway
+
+Gateway -> Gateway: Validate JWT token
+note right: JWT is valid and not expired\nMock authentication token
+
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource, method}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT and extract user ID
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions
+deactivate AuthDB
+
+AuthService -> AuthService: Check permissions
+AuthService -> Gateway: 200 OK\n{authorized: true, user info}
+deactivate AuthService
+
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate PortfolioService
+
+PortfolioService -> PortfolioDB: Query portfolios
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data
+deactivate PortfolioDB
+
+PortfolioService -> Gateway: 200 OK\n{portfolios: [...]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [...]}
+deactivate Gateway
+
+Browser -> User: Display data
+
+== Flow 3: Different Mock User Roles ==
+note over User, PortfolioDB
+Mock User Role Scenarios:
+
+1. user1 (ROLE_PORTFOLIO_MANAGER):
+   - Permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE]
+   - Can manage own portfolios
+   - Cannot access admin functions
+
+2. user2 (ROLE_VIEWER):
+   - Permissions: [PORTFOLIO_READ]
+   - Can only view portfolios
+   - Cannot create or modify
+
+3. admin (ROLE_ADMIN):
+   - Permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE, PORTFOLIO_DELETE, USER_MANAGE]
+   - Full system access
+   - Can manage users and settings
+end note
+
+== Flow 4: Create Resource (Mock User) ==
+User -> Browser: Create new portfolio
+Browser -> Gateway: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name, description, type}
+activate Gateway
+
+Gateway -> Gateway: Validate JWT
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "POST"}
+activate AuthService
+
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user permissions
+deactivate AuthDB
+
+AuthService -> AuthService: Check PORTFOLIO_CREATE permission
+AuthService -> Gateway: 200 OK\n{authorized: true}
+deactivate AuthService
+
+Gateway -> PortfolioService: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name, description, type}
+activate PortfolioService
+
+PortfolioService -> PortfolioDB: INSERT portfolio
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return created portfolio
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Publish PortfolioCreatedEvent
+PortfolioService -> Gateway: 201 Created\n{portfolio: {...}}
+deactivate PortfolioService
+
+Gateway -> Browser: 201 Created\n{portfolio: {...}}
+deactivate Gateway
+
+Browser -> User: Show success message
+
+== Mock IdP Configuration ==
+note over Gateway, AuthService
+Mock IdP Configuration (application-mock-auth.yml):
+mock:
+  auth:
+    enabled: true
+    jwt:
+      secret: mock-jwt-secret-key
+      expiration: 3600
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER]
+        email: user1@company.com
+        permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE]
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER]
+        email: user2@company.com
+        permissions: [PORTFOLIO_READ]
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN]
+        email: admin@company.com
+        permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE, PORTFOLIO_DELETE, USER_MANAGE]
+end note
+
+== Error Flows ==
+note over User, PortfolioDB
+Mock IdP Error Scenarios:
+1. Invalid username → 401 Unauthorized
+2. Wrong password → 401 Unauthorized
+3. Expired JWT → 401 + redirect to /mock-login
+4. Invalid JWT → 401 + redirect to /mock-login
+5. Insufficient permissions → 403 Forbidden
+6. User not in mock config → 401 + redirect to /mock-login
+7. Mock IdP not configured → 500 Internal Server Error
+end note
+
+== Security Features ==
+note over Gateway, AuthService
+Mock IdP Security Implementations:
+1. JWT token validation and signature verification
+2. Role-based access control (RBAC)
+3. Permission-based authorization
+4. Token expiration handling
+5. Secure token storage in browser
+6. Mock user configuration validation
+7. Service-to-service JWT propagation
+end note
+
+== Development Benefits ==
+note over User, PortfolioDB
+Mock IdP Development Advantages:
+1. No external dependencies
+2. Fast startup and testing
+3. Predictable user scenarios
+4. Easy to configure and modify
+5. Consistent test environment
+6. No network dependencies
+7. Quick development iteration
+end note
+
+@enduml 

@@ -1,0 +1,127 @@
+@startuml Authenticated User Flow
+!theme plain
+title Authenticated User Accessing Protected Resource
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🆔 SimpleSAMLphp\nIdP (8081)" as IdP
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== User Already Authenticated ==
+note over User, Browser: User has valid JWT token stored in browser
+
+== Direct Access to Protected Resource ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Browser: Retrieve JWT token\nfrom localStorage/sessionStorage
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token from header
+Gateway -> Gateway: Validate JWT signature
+Gateway -> Gateway: Check JWT expiration
+note right: JWT is valid and not expired
+
+Gateway -> Gateway: Extract user claims\n(userId, roles, permissions)
+
+== Authorization Check ==
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: /api/portfolios, method: GET}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT token
+AuthService -> AuthService: Extract user ID from JWT
+
+AuthService -> AuthDB: Query user permissions\nSELECT roles, permissions FROM users WHERE id = ?
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions
+deactivate AuthDB
+
+AuthService -> AuthService: Check if user has required permissions\nfor /api/portfolios GET
+note right: User has PORTFOLIO_READ permission
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id, roles, permissions}}
+deactivate AuthService
+
+== Service Communication ==
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>\nX-User-ID: <userId>
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioService: Extract user ID from JWT
+PortfolioService -> PortfolioService: Check user permissions
+
+PortfolioService -> PortfolioDB: SELECT * FROM portfolios\nWHERE owner_id = ? OR is_public = true
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Filter portfolios based on user permissions
+PortfolioService -> Gateway: 200 OK\n{portfolios: [{id, name, description, ...}]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [{id, name, description, ...}]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Alternative: Create New Portfolio ==
+User -> Browser: Create new portfolio\nPOST /api/portfolios
+Browser -> Gateway: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name: "New Portfolio", description: "..."}
+activate Gateway
+
+Gateway -> Gateway: Extract and validate JWT
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: /api/portfolios, method: POST}
+activate AuthService
+
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions
+deactivate AuthDB
+
+AuthService -> AuthService: Check PORTFOLIO_CREATE permission
+AuthService -> Gateway: 200 OK\n{authorized: true, user info}
+deactivate AuthService
+
+Gateway -> PortfolioService: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name, description, ...}
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT and extract user ID
+PortfolioService -> PortfolioDB: INSERT INTO portfolios\n(name, description, owner_id, created_at)
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return created portfolio ID
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Publish PortfolioCreatedEvent
+PortfolioService -> Gateway: 201 Created\n{portfolio: {id, name, description, ...}}
+deactivate PortfolioService
+
+Gateway -> Browser: 201 Created\n{portfolio: {id, name, description, ...}}
+deactivate Gateway
+
+Browser -> User: Show success message\nand redirect to portfolio
+
+== Error Handling ==
+note over User, PortfolioDB
+Error scenarios for authenticated users:
+1. Expired JWT → 401 Unauthorized + redirect to login
+2. Invalid JWT → 401 Unauthorized + redirect to login
+3. Insufficient permissions → 403 Forbidden
+4. Resource not found → 404 Not Found
+5. Validation errors → 400 Bad Request
+6. Server errors → 500 Internal Server Error
+end note
+
+== Token Refresh (Optional) ==
+note over Gateway, AuthService
+If JWT is close to expiration:
+1. Gateway detects expiring token
+2. Gateway requests new token from AuthService
+3. AuthService validates current token
+4. AuthService issues new JWT
+5. Gateway updates response with new token
+end note
+
+@enduml 

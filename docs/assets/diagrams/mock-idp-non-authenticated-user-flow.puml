@@ -1,0 +1,156 @@
+@startuml Mock IdP - Non-Authenticated User Flow
+!theme plain
+title Mock IdP - Non-Authenticated User Accessing Protected Resource
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== Initial Request to Protected Resource ==
+User -> Browser: Navigate to protected resource\n(e.g., /api/portfolios)
+Browser -> Gateway: GET /api/portfolios
+activate Gateway
+
+Gateway -> Gateway: Check for JWT token in request
+note right: No JWT token found in\nAuthorization header or cookies
+
+Gateway -> Gateway: Check authentication mode
+note right: Mock authentication mode\nconfigured in application-mock-auth.yml
+
+Gateway -> Browser: 401 Unauthorized\n+ Redirect to /mock-login
+deactivate Gateway
+
+Browser -> User: Display mock login page\n(http://localhost:8080/mock-login)
+
+== Mock Login Process ==
+User -> Browser: View available test users
+Browser -> Gateway: GET /api/auth/mock-users
+activate Gateway
+
+Gateway -> AuthService: GET /api/auth/mock-users
+activate AuthService
+
+AuthService -> AuthService: Load mock user configuration
+AuthService -> Gateway: 200 OK\n{users: [{username, roles, email}]}
+deactivate AuthService
+
+Gateway -> Browser: 200 OK\n{users: [{username, roles, email}]}
+deactivate Gateway
+
+Browser -> User: Display available test users:\n- user1 (Portfolio Manager)\n- user2 (Viewer)\n- admin (Administrator)
+
+User -> Browser: Select user and enter password\n(username: "user1", password: "password")
+Browser -> Gateway: POST /api/auth/mock-login\nContent-Type: application/json\n{username: "user1", password: "password"}
+activate Gateway
+
+Gateway -> Gateway: Validate request format
+Gateway -> Gateway: Check if username exists in mock config
+
+Gateway -> AuthService: POST /api/auth/validate\n{username: "user1", password: "password"}
+activate AuthService
+
+AuthService -> AuthService: Load mock user configuration
+AuthService -> AuthService: Validate credentials against mock config
+note right: Mock validation:\nusername: "user1"\npassword: "password"\nroles: ["ROLE_PORTFOLIO_MANAGER"]
+
+AuthService -> AuthService: Generate JWT token with user claims
+note right: JWT payload:\n{userId: 1, username: "user1",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nexp: <expiration>}
+
+AuthService -> Gateway: 200 OK\n{token: "<JWT>", user: {id: 1, username: "user1", roles: ["ROLE_PORTFOLIO_MANAGER"]}}
+deactivate AuthService
+
+Gateway -> Browser: 200 OK\n{token: "<JWT>", user: {id: 1, username: "user1", roles: ["ROLE_PORTFOLIO_MANAGER"]}}
+deactivate Gateway
+
+Browser -> Browser: Store JWT token in localStorage
+Browser -> User: Redirect to original resource\n(/api/portfolios)
+
+== Authenticated Request with Mock JWT ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Browser: Retrieve JWT token from localStorage
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token from Authorization header
+Gateway -> Gateway: Validate JWT signature and expiration
+note right: JWT is valid and not expired
+
+Gateway -> Gateway: Extract user claims from JWT
+note right: Claims: {userId: 1, username: "user1",\nroles: ["ROLE_PORTFOLIO_MANAGER"]}
+
+== Authorization Check ==
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "GET"}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT token
+AuthService -> AuthService: Extract user ID from JWT (userId: 1)
+
+AuthService -> AuthDB: Query user permissions\nSELECT roles, permissions FROM users WHERE id = 1
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{roles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check if user has PORTFOLIO_READ permission
+note right: User has PORTFOLIO_READ permission\nfor /api/portfolios GET
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, roles: ["ROLE_PORTFOLIO_MANAGER"], permissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE"]}}
+deactivate AuthService
+
+== Service Communication ==
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>\nX-User-ID: 1
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioService: Extract user ID from JWT (userId: 1)
+PortfolioService -> PortfolioService: Check user permissions for portfolio access
+
+PortfolioService -> PortfolioDB: SELECT * FROM portfolios\nWHERE owner_id = 1 OR is_public = true
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data\n[{id: 1, name: "Enterprise Portfolio", owner_id: 1, ...}]
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Filter portfolios based on user permissions
+PortfolioService -> Gateway: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "...", owner_id: 1, ...}]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "...", owner_id: 1, ...}]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Error Scenarios ==
+note over User, PortfolioDB
+Mock IdP Error Scenarios:
+1. Invalid username → 401 Unauthorized
+2. Wrong password → 401 Unauthorized
+3. Expired JWT → 401 Unauthorized + redirect to /mock-login
+4. Invalid JWT → 401 Unauthorized + redirect to /mock-login
+5. Insufficient permissions → 403 Forbidden
+6. Mock IdP not configured → 500 Internal Server Error
+end note
+
+== Mock Configuration ==
+note over Gateway, AuthService
+Mock IdP Configuration (application-mock-auth.yml):
+mock:
+  auth:
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER]
+        email: user1@company.com
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER]
+        email: user2@company.com
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN]
+        email: admin@company.com
+end note
+
+@enduml 

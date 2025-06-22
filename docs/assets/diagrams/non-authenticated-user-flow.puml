@@ -1,0 +1,98 @@
+@startuml Non-Authenticated User Flow
+!theme plain
+title Non-Authenticated User Accessing Protected Resource
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🆔 SimpleSAMLphp\nIdP (8081)" as IdP
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== Initial Request ==
+User -> Browser: Navigate to protected resource\n(e.g., /api/portfolios)
+Browser -> Gateway: GET /api/portfolios
+activate Gateway
+
+Gateway -> Gateway: Check for JWT token in request
+note right: No JWT token found
+
+Gateway -> Browser: 401 Unauthorized\n+ Redirect to login
+deactivate Gateway
+
+Browser -> User: Show login page
+
+== Authentication Flow ==
+User -> Browser: Enter credentials\n(username/password)
+Browser -> Gateway: POST /api/auth/mock-login\n{username, password}
+activate Gateway
+
+Gateway -> AuthService: POST /api/auth/validate\n{username, password}
+activate AuthService
+
+AuthService -> AuthDB: Query user credentials
+activate AuthDB
+AuthDB -> AuthService: Return user data
+deactivate AuthDB
+
+AuthService -> AuthService: Validate credentials
+AuthService -> AuthService: Generate JWT token
+AuthService -> Gateway: 200 OK\n{JWT token, user info}
+deactivate AuthService
+
+Gateway -> Browser: 200 OK\n{JWT token, user info}
+deactivate Gateway
+
+Browser -> Browser: Store JWT token\n(in localStorage/sessionStorage)
+Browser -> User: Redirect to original resource
+
+== Authenticated Request ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token
+Gateway -> Gateway: Validate JWT signature
+Gateway -> Gateway: Extract user claims
+
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: /api/portfolios}
+activate AuthService
+
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions
+deactivate AuthDB
+
+AuthService -> AuthService: Check authorization
+AuthService -> Gateway: 200 OK\n{authorized: true, user info}
+deactivate AuthService
+
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioDB: Query portfolios
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data
+deactivate PortfolioDB
+
+PortfolioService -> Gateway: 200 OK\n{portfolios: [...]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [...]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Error Scenarios ==
+note over User, PortfolioDB
+Alternative flows:
+1. Invalid credentials → 401 Unauthorized
+2. Insufficient permissions → 403 Forbidden
+3. Expired JWT → 401 Unauthorized + redirect to login
+4. Invalid JWT → 401 Unauthorized + redirect to login
+end note
+
+@enduml 

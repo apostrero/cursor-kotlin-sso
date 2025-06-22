@@ -8,12 +8,17 @@ Welcome to the Technology Portfolio SSO project documentation. This comprehensiv
 - [Hexagonal Architecture](./architecture/hexagonal-architecture.md) - System architecture overview
 - [Shared Module Structure](./architecture/shared-module-structure.md) - Shared components organization
 - [SSO Architecture](./architecture/sso-architecture.md) - Single Sign-On implementation
+- [📊 Sequence Diagrams](./assets/diagrams/) - Authentication and authorization flows
+  - [Mock IdP Flows](./assets/diagrams/#mock-idp-specific-diagrams) - Development authentication flows
+  - [SAML Flows](./assets/diagrams/#saml-specific-diagrams) - Production SAML authentication flows
 
 ### 🛠️ [Development](./development/)
 - [Implementation Guide](./development/implementation-guide.md) - Development setup and guidelines
 - [Gradle Local Development](./development/gradle-local-development.md) - Local development workflow
 - [WebFlux Migration Plan](./development/webflux-migration-plan.md) - Reactive programming migration
 - [Flux Usage Guide](./development/flux-usage-guide.md) - Reactive programming patterns
+- [SAML Non-Authenticated User Flow Walk-Through](./development/saml-non-authenticated-user-flow-walkthrough.md) - Detailed code walk-through of SAML authentication flow
+- [SAML Authenticated User Flow Walk-Through](./development/saml-authenticated-user-flow-walkthrough.md) - Detailed code walk-through of SAML authenticated user flow
 
 ### 🚀 [Deployment](./deployment/)
 - [Deployment Guide](./deployment/deployment-guide.md) - Complete deployment instructions
@@ -65,11 +70,19 @@ The system supports dual authentication modes:
 - Uses SimpleSAMLphp as Identity Provider
 - Production-ready SSO implementation
 - Configured via `docker-compose.yml`
+- **SAML Users**:
+  - `user1`/`password` (portfolio-managers group)
+  - `user2`/`password` (viewers group)
+  - `admin`/`secret` (admins group)
 
 ### Mock Authentication
 - Development-friendly mock authentication
 - No external dependencies
 - Configured via `docker-compose-mock.yml`
+- **Test Users**:
+  - `user1`/`password` (Portfolio Manager)
+  - `user2`/`password` (Viewer)
+  - `admin`/`secret` (Administrator)
 
 ## 🏗️ Architecture Overview
 

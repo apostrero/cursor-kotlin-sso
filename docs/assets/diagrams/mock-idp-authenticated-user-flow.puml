@@ -1,0 +1,183 @@
+@startuml Mock IdP - Authenticated User Flow
+!theme plain
+title Mock IdP - Authenticated User Accessing Protected Resource
+
+actor User as "👤 User"
+participant "🌐 Browser" as Browser
+participant "🚪 API Gateway\n(8080)" as Gateway
+participant "🔐 Authorization\nService (8082)" as AuthService
+participant "📊 Technology Portfolio\nService (8083)" as PortfolioService
+participant "🗄️ PostgreSQL\nAuth DB" as AuthDB
+participant "🗄️ PostgreSQL\nPortfolio DB" as PortfolioDB
+
+== User Already Authenticated with Mock IdP ==
+note over User, Browser: User has valid JWT token from mock authentication\nstored in browser localStorage/sessionStorage
+
+== Direct Access to Protected Resource ==
+User -> Browser: Access protected resource\n(e.g., /api/portfolios)
+Browser -> Browser: Retrieve JWT token from localStorage
+note right: JWT token from previous mock login:\n{userId: 1, username: "user1",\nroles: ["ROLE_PORTFOLIO_MANAGER"]}
+
+Browser -> Gateway: GET /api/portfolios\nAuthorization: Bearer <JWT>
+activate Gateway
+
+Gateway -> Gateway: Extract JWT token from Authorization header
+Gateway -> Gateway: Validate JWT signature
+Gateway -> Gateway: Check JWT expiration
+note right: JWT is valid and not expired\nMock authentication token
+
+Gateway -> Gateway: Extract user claims from JWT
+note right: Claims: {userId: 1, username: "user1",\nroles: ["ROLE_PORTFOLIO_MANAGER"],\nexp: <expiration>}
+
+== Mock IdP Authorization Check ==
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "GET"}
+activate AuthService
+
+AuthService -> AuthService: Validate JWT token
+AuthService -> AuthService: Extract user ID from JWT (userId: 1)
+AuthService -> AuthService: Check if user exists in mock configuration
+
+AuthService -> AuthDB: Query user permissions\nSELECT roles, permissions FROM users WHERE id = 1
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{roles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check if user has PORTFOLIO_READ permission
+note right: User has PORTFOLIO_READ permission\nfor /api/portfolios GET operation
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, username: "user1", roles: ["ROLE_PORTFOLIO_MANAGER"], permissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}}
+deactivate AuthService
+
+== Service Communication with Mock User ==
+Gateway -> PortfolioService: GET /api/portfolios\nAuthorization: Bearer <JWT>\nX-User-ID: 1
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT token
+PortfolioService -> PortfolioService: Extract user ID from JWT (userId: 1)
+PortfolioService -> PortfolioService: Check user permissions for portfolio access
+
+PortfolioService -> PortfolioDB: SELECT * FROM portfolios\nWHERE owner_id = 1 OR is_public = true\nORDER BY created_at DESC
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return portfolio data\n[{id: 1, name: "Enterprise Portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", ...},\n{id: 2, name: "Project Alpha", owner_id: 1, type: "PROJECT", status: "ACTIVE", ...}]
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Filter portfolios based on user permissions
+PortfolioService -> PortfolioService: Apply user-specific data filtering
+PortfolioService -> Gateway: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...},\n{id: 2, name: "Project Alpha", description: "Alpha project portfolio", owner_id: 1, type: "PROJECT", status: "ACTIVE", created_at: "2024-01-20T14:15:00Z", ...}]}
+deactivate PortfolioService
+
+Gateway -> Browser: 200 OK\n{portfolios: [{id: 1, name: "Enterprise Portfolio", description: "Main enterprise portfolio", owner_id: 1, type: "ENTERPRISE", status: "ACTIVE", created_at: "2024-01-15T10:30:00Z", ...},\n{id: 2, name: "Project Alpha", description: "Alpha project portfolio", owner_id: 1, type: "PROJECT", status: "ACTIVE", created_at: "2024-01-20T14:15:00Z", ...}]}
+deactivate Gateway
+
+Browser -> User: Display portfolio data
+
+== Alternative: Create New Portfolio (Mock User) ==
+User -> Browser: Create new portfolio\nPOST /api/portfolios
+Browser -> Gateway: POST /api/portfolios\nAuthorization: Bearer <JWT>\nContent-Type: application/json\n{name: "New Mock Portfolio", description: "Portfolio created by mock user", type: "PROJECT"}
+activate Gateway
+
+Gateway -> Gateway: Extract and validate JWT
+Gateway -> AuthService: POST /api/auth/authorize\n{JWT token, resource: "/api/portfolios", method: "POST"}
+activate AuthService
+
+AuthService -> AuthDB: Query user permissions
+activate AuthDB
+AuthDB -> AuthService: Return user roles & permissions\n{roles: ["ROLE_PORTFOLIO_MANAGER"],\npermissions: ["PORTFOLIO_READ", "PORTFOLIO_WRITE", "PORTFOLIO_CREATE"]}
+deactivate AuthDB
+
+AuthService -> AuthService: Check PORTFOLIO_CREATE permission
+note right: User has PORTFOLIO_CREATE permission\nfor /api/portfolios POST operation
+
+AuthService -> Gateway: 200 OK\n{authorized: true, user: {id: 1, username: "user1", roles: ["ROLE_PORTFOLIO_MANAGER"]}}
+deactivate AuthService
+
+Gateway -> PortfolioService: POST /api/portfolios\nAuthorization: Bearer <JWT>\n{name: "New Mock Portfolio", description: "Portfolio created by mock user", type: "PROJECT"}
+activate PortfolioService
+
+PortfolioService -> PortfolioService: Validate JWT and extract user ID (userId: 1)
+PortfolioService -> PortfolioService: Validate portfolio data
+PortfolioService -> PortfolioDB: INSERT INTO portfolios\n(name, description, type, owner_id, status, created_at)\nVALUES (?, ?, ?, ?, 'ACTIVE', NOW())
+activate PortfolioDB
+PortfolioDB -> PortfolioService: Return created portfolio ID (id: 3)
+deactivate PortfolioDB
+
+PortfolioService -> PortfolioService: Publish PortfolioCreatedEvent
+PortfolioService -> Gateway: 201 Created\n{portfolio: {id: 3, name: "New Mock Portfolio", description: "Portfolio created by mock user", type: "PROJECT", owner_id: 1, status: "ACTIVE", created_at: "2024-01-22T09:45:00Z"}}
+deactivate PortfolioService
+
+Gateway -> Browser: 201 Created\n{portfolio: {id: 3, name: "New Mock Portfolio", description: "Portfolio created by mock user", type: "PROJECT", owner_id: 1, status: "ACTIVE", created_at: "2024-01-22T09:45:00Z"}}
+deactivate Gateway
+
+Browser -> User: Show success message\nand redirect to new portfolio
+
+== Alternative: Different Mock User Roles ==
+note over User, PortfolioDB
+Different Mock User Scenarios:
+
+1. user2 (ROLE_VIEWER):
+   - Can only READ portfolios
+   - Cannot CREATE/UPDATE/DELETE
+   - Sees only public portfolios
+
+2. admin (ROLE_ADMIN):
+   - Has all permissions
+   - Can access all portfolios
+   - Can manage users and system settings
+
+3. user1 (ROLE_PORTFOLIO_MANAGER):
+   - Can READ/WRITE/CREATE portfolios
+   - Can manage own portfolios
+   - Cannot access admin functions
+end note
+
+== Mock IdP Error Handling ==
+note over User, PortfolioDB
+Mock IdP Error Scenarios for Authenticated Users:
+1. Expired JWT → 401 Unauthorized + redirect to /mock-login
+2. Invalid JWT signature → 401 Unauthorized + redirect to /mock-login
+3. User not found in mock config → 401 Unauthorized + redirect to /mock-login
+4. Insufficient permissions → 403 Forbidden
+5. Resource not found → 404 Not Found
+6. Validation errors → 400 Bad Request
+7. Mock IdP service unavailable → 503 Service Unavailable
+end note
+
+== Mock IdP Token Refresh (Optional) ==
+note over Gateway, AuthService
+Mock IdP Token Refresh Flow:
+1. Gateway detects JWT is close to expiration
+2. Gateway requests new token from AuthService
+3. AuthService validates current mock token
+4. AuthService issues new JWT with same mock user claims
+5. Gateway updates response with new token
+6. Browser stores updated token
+end note
+
+== Mock IdP Configuration Details ==
+note over Gateway, AuthService
+Mock IdP Configuration (application-mock-auth.yml):
+mock:
+  auth:
+    enabled: true
+    jwt:
+      secret: mock-jwt-secret-key
+      expiration: 3600
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER]
+        email: user1@company.com
+        permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE]
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER]
+        email: user2@company.com
+        permissions: [PORTFOLIO_READ]
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN]
+        email: admin@company.com
+        permissions: [PORTFOLIO_READ, PORTFOLIO_WRITE, PORTFOLIO_CREATE, PORTFOLIO_DELETE, USER_MANAGE]
+end note
+
+@enduml 
