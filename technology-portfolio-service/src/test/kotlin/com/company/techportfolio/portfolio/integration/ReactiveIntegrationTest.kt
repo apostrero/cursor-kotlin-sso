@@ -23,6 +23,7 @@ import org.springframework.transaction.reactive.TransactionalOperator
 import org.springframework.web.reactive.function.BodyInserters
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import java.time.Instant
 
 /**
  * Comprehensive integration tests for the reactive Technology Portfolio Service.
@@ -140,7 +141,7 @@ class ReactiveIntegrationTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio creation failed")
 
         // Then
         assertNotNull(response)
@@ -158,7 +159,7 @@ class ReactiveIntegrationTest {
         // Verify database persistence
         val savedPortfolio = findPortfolioInDatabase(response.id)
         assertNotNull(savedPortfolio)
-        assertEquals("Integration Test Portfolio", savedPortfolio["name"])
+        assertEquals("Integration Test Portfolio", savedPortfolio!!["name"])
     }
 
     /**
@@ -185,7 +186,7 @@ class ReactiveIntegrationTest {
             .expectStatus().isOk
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio retrieval failed")
 
         // Then
         assertEquals(createdPortfolio["name"], response.name)
@@ -220,16 +221,16 @@ class ReactiveIntegrationTest {
             .expectStatus().isCreated
             .expectBody(TechnologyResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Technology addition failed")
 
         // Then
         assertNotNull(response.id)
         assertEquals("Spring Boot", response.name)
 
         // Verify database persistence
-        val savedTechnology = findTechnologyInDatabase(response.id!!)
+        val savedTechnology = findTechnologyInDatabase(response.id)
         assertNotNull(savedTechnology)
-        assertEquals("Spring Boot", savedTechnology["name"])
+        assertEquals("Spring Boot", savedTechnology!!["name"])
         assertEquals(portfolio["id"], savedTechnology["portfolio_id"])
     }
 
@@ -245,7 +246,7 @@ class ReactiveIntegrationTest {
      * - Proper backpressure handling
      */
     @Test
-    @WithMockUser(roles = ["VIEWER"])  // Changed from ADMIN to VIEWER since controller allows VIEWER
+    @WithMockUser(roles = ["VIEWER"])  // Changed from ADMIN to VIEWER
     fun `should stream portfolios reactively`() {
         // Given - Create multiple portfolios
         createPortfolioInDatabase("Portfolio 1")
@@ -265,9 +266,9 @@ class ReactiveIntegrationTest {
                 val body = result.responseBody
                 assertNotNull(body)
                 // Verify that we get SSE data format
-                assertTrue(body!!.contains("data:"))
+                assertTrue(body?.contains("data:") == true)
                 // Verify that we get portfolio data
-                assertTrue(body.contains("Portfolio"))
+                assertTrue(body?.contains("Portfolio") == true)
             }
     }
 
@@ -334,13 +335,14 @@ class ReactiveIntegrationTest {
 
         // When - Make concurrent requests
         val requests = (1..10).map { i ->
-            webTestClient.get()
+            val response = webTestClient.get()
                 .uri("/api/v1/portfolios/${portfolio["id"]}")
                 .exchange()
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody ?: throw AssertionError("Concurrent request $i failed")
+            response
         }
 
         // Then - All requests should succeed
@@ -421,7 +423,7 @@ class ReactiveIntegrationTest {
         }
 
         // When - Measure response time for streaming
-        val startTime = System.currentTimeMillis()
+        val startTime = Instant.now()
 
         val response = webTestClient.get()
             .uri("/api/v1/portfolios/stream")
@@ -431,17 +433,17 @@ class ReactiveIntegrationTest {
             .expectBodyList(PortfolioSummary::class.java)
             .hasSize(50)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: emptyList()
 
-        val endTime = System.currentTimeMillis()
-        val responseTime = endTime - startTime
+        val endTime = Instant.now()
+        val responseTime = java.time.Duration.between(startTime, endTime).toMillis()
 
         // Then - Verify performance characteristics
         assertTrue(responseTime < 5000) // Should complete within 5 seconds
         assertEquals(50, response.size)
 
         // Verify all portfolios are returned
-        response.forEachIndexed { index, summary ->
+        response.forEachIndexed { _, summary ->
             assertTrue(summary.name.contains("Performance Test Portfolio"))
         }
     }
@@ -453,7 +455,7 @@ class ReactiveIntegrationTest {
             // First, create tables if they don't exist
             createTablesIfNotExist()
 
-            // Then clean up data
+            // Then clean up data using reactive approach
             databaseClient.sql("DELETE FROM technologies").fetch().rowsUpdated().block()
             databaseClient.sql("DELETE FROM portfolios").fetch().rowsUpdated().block()
         } catch (e: Exception) {
@@ -536,13 +538,13 @@ class ReactiveIntegrationTest {
             .block() ?: throw AssertionError("Portfolio with name '$name' not found in database after insert")
     }
 
-    private fun findPortfolioInDatabase(id: Long): Map<String, Any?> {
+    private fun findPortfolioInDatabase(id: Long): Map<String, Any?>? {
         return databaseClient.sql("SELECT * FROM portfolios WHERE id = :id")
             .bind("id", id)
             .fetch()
             .first()
             .map { row -> row.toMap() }
-            .block() ?: throw AssertionError("Portfolio with id $id not found in database")
+            .block()
     }
 
     private fun addTechnologyToPortfolio(portfolioId: Long): Map<String, Any?> {
@@ -575,13 +577,13 @@ class ReactiveIntegrationTest {
             .block() ?: throw AssertionError("Technology for portfolio $portfolioId not found in database")
     }
 
-    private fun findTechnologyInDatabase(id: Long): Map<String, Any?> {
+    private fun findTechnologyInDatabase(id: Long): Map<String, Any?>? {
         return databaseClient.sql("SELECT * FROM technologies WHERE id = :id")
             .bind("id", id)
             .fetch()
             .first()
             .map { row -> row.toMap() }
-            .block() ?: throw AssertionError("Technology with id $id not found in database")
+            .block()
     }
 
     private fun findTechnologiesByPortfolioId(portfolioId: Long): List<Map<String, Any?>> {
@@ -591,7 +593,7 @@ class ReactiveIntegrationTest {
             .all()
             .map { row -> row.toMap() }
             .collectList()
-            .block()!!
+            .block() ?: emptyList()
     }
 
     private fun Row.toMap(): Map<String, Any?> {

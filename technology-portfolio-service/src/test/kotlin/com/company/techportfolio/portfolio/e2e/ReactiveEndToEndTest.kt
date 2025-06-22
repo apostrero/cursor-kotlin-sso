@@ -134,7 +134,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio creation failed")
 
         assertNotNull(createdPortfolio.id)
         assertEquals("E2E Test Portfolio", createdPortfolio.name)
@@ -150,7 +150,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(TechnologyResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Technology addition failed")
 
         assertNotNull(addedTechnology.id)
         assertEquals("Spring Boot", addedTechnology.name)
@@ -162,7 +162,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isOk
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio retrieval failed")
 
         assertEquals(1, portfolioWithTechnology.technologyCount)
         assertNotNull(portfolioWithTechnology.totalAnnualCost)
@@ -184,7 +184,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(TechnologyResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Second technology addition failed")
 
         assertNotNull(secondTechnology.id)
         assertEquals("PostgreSQL", secondTechnology.name)
@@ -196,7 +196,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isOk
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Updated portfolio retrieval failed")
 
         assertEquals(2, updatedPortfolio.technologyCount)
         assertEquals(BigDecimal("8000.00"), updatedPortfolio.totalAnnualCost)
@@ -208,7 +208,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isOk
             .expectBodyList(PortfolioSummary::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: emptyList()
 
         assertTrue(searchResults.isNotEmpty())
         assertTrue(searchResults.any { it.name.contains("E2E") })
@@ -224,11 +224,11 @@ class ReactiveEndToEndTest {
             .hasSize(1)
 
         // Verify database consistency
-        val dbPortfolio = findPortfolioInDatabase(createdPortfolio.id!!)
+        val dbPortfolio = findPortfolioInDatabase(createdPortfolio.id)
         assertNotNull(dbPortfolio)
         assertEquals("E2E Test Portfolio", dbPortfolio!!["name"])
 
-        val dbTechnologies = findTechnologiesByPortfolioId(createdPortfolio.id!!)
+        val dbTechnologies = findTechnologiesByPortfolioId(createdPortfolio.id)
         assertEquals(2, dbTechnologies.size)
     }
 
@@ -278,7 +278,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("User portfolio creation failed")
 
         assertNotNull(userPortfolio.id)
 
@@ -364,8 +364,12 @@ class ReactiveEndToEndTest {
             .exchange()
 
         // Check if validation is implemented - if not, it will succeed with CREATED
-        if (invalidPortfolioResponse.expectStatus().isCreated.returnResult(PortfolioResponse::class.java).responseBody != null) {
+        try {
+            invalidPortfolioResponse.expectStatus().isCreated
             logger.info("Note: Validation not fully implemented - invalid portfolio was created successfully")
+        } catch (e: AssertionError) {
+            // Validation is working - this is expected
+            logger.info("Validation is working - invalid portfolio was rejected")
         }
 
         // Step 3: Test invalid technology data
@@ -383,7 +387,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Valid portfolio creation failed")
 
         // Then try to add invalid technology - expect either BAD_REQUEST or CREATED depending on validation
         val invalidTechResponse = webTestClient.post()
@@ -393,8 +397,12 @@ class ReactiveEndToEndTest {
             .exchange()
 
         // Check if validation is implemented - if not, it will succeed with CREATED
-        if (invalidTechResponse.expectStatus().isCreated.returnResult(TechnologyResponse::class.java).responseBody != null) {
+        try {
+            invalidTechResponse.expectStatus().isCreated
             logger.info("Note: Technology validation not fully implemented - invalid technology was created successfully")
+        } catch (e: AssertionError) {
+            // Validation is working - this is expected
+            logger.info("Technology validation is working - invalid technology was rejected")
         }
 
         // Step 4: Test adding technology to non-existent portfolio
@@ -420,7 +428,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isOk
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio retrieval after error failed")
 
         assertEquals("E2E Test Portfolio", validPortfolio.name) // Portfolio should remain unchanged
         // Note: Technology count may vary depending on validation implementation
@@ -450,7 +458,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio creation for external services test failed")
 
         assertNotNull(portfolio.id)
 
@@ -463,7 +471,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(TechnologyResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Technology creation for external services test failed")
 
         assertNotNull(technology.id)
 
@@ -556,10 +564,10 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio creation for consistency test failed")
 
         // Verify database state
-        val dbPortfolio = findPortfolioInDatabase(portfolio.id!!)
+        val dbPortfolio = findPortfolioInDatabase(portfolio.id)
         assertNotNull(dbPortfolio)
         assertEquals("E2E Test Portfolio", dbPortfolio!!["name"])
         // Handle technology_count column which might not exist or be null
@@ -575,30 +583,31 @@ class ReactiveEndToEndTest {
             .expectStatus().isCreated
             .expectBody(TechnologyResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Technology creation for consistency test failed")
 
         // Verify technology in database
-        val dbTechnology = findTechnologyInDatabase(technology.id!!)
+        val dbTechnology = findTechnologyInDatabase(technology.id)
         assertNotNull(dbTechnology)
         assertEquals("Spring Boot", dbTechnology!!["name"])
         assertEquals(portfolio.id, dbTechnology["portfolio_id"])
 
         // Verify portfolio count is updated (Note: technology_count in DB may not be automatically updated)
-        findPortfolioInDatabase(portfolio.id!!)
+        findPortfolioInDatabase(portfolio.id)
         // The application calculates technology count dynamically, not stored in DB
         // So we'll verify the actual technologies exist instead
-        val technologiesInDb = findTechnologiesByPortfolioId(portfolio.id!!)
+        val technologiesInDb = findTechnologiesByPortfolioId(portfolio.id)
         assertEquals(1, technologiesInDb.size)
 
         // Step 3: Test concurrent access
-        val concurrentResults = (1..10).map { i ->
-            webTestClient.get()
+        val concurrentResults = (1..10).map { _ ->
+            val response = webTestClient.get()
                 .uri("/api/v1/portfolios/${portfolio.id}")
                 .exchange()
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody ?: throw AssertionError("Concurrent portfolio retrieval failed")
+            response
         }
 
         // All concurrent reads should return consistent data
@@ -623,11 +632,11 @@ class ReactiveEndToEndTest {
         // Don't assert specific status as validation may not be implemented
 
         // Verify technologies exist for the portfolio
-        val technologiesAfterError = findTechnologiesByPortfolioId(portfolio.id!!)
+        val technologiesAfterError = findTechnologiesByPortfolioId(portfolio.id)
         assertTrue(technologiesAfterError.size >= 1) // At least the original technology
 
         // Verify portfolio still exists and has correct name
-        val portfolioAfterError = findPortfolioInDatabase(portfolio.id!!)
+        val portfolioAfterError = findPortfolioInDatabase(portfolio.id)
         assertNotNull(portfolioAfterError)
         assertEquals("E2E Test Portfolio", portfolioAfterError!!["name"])
 
@@ -638,7 +647,7 @@ class ReactiveEndToEndTest {
             .expectStatus().isOk
             .expectBody(PortfolioResponse::class.java)
             .returnResult()
-            .responseBody!!
+            .responseBody ?: throw AssertionError("Portfolio with technologies retrieval failed")
 
         assertTrue(portfolioWithTechnologies.technologyCount >= 1)
         assertNotNull(portfolioWithTechnologies.totalAnnualCost)
@@ -651,7 +660,7 @@ class ReactiveEndToEndTest {
             // First, create tables if they don't exist
             createTablesIfNotExist()
 
-            // Then clean up data
+            // Then clean up data using reactive approach
             databaseClient.sql("DELETE FROM technologies").fetch().rowsUpdated().block()
             databaseClient.sql("DELETE FROM portfolios").fetch().rowsUpdated().block()
         } catch (e: Exception) {
@@ -734,7 +743,7 @@ class ReactiveEndToEndTest {
             .all()
             .map { row -> row.toMap() }
             .collectList()
-            .block()!!
+            .block() ?: emptyList()
     }
 
     private fun Row.toMap(): Map<String, Any?> {

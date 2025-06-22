@@ -167,18 +167,12 @@ class OpenApiConfig {
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties(
-                                                            "error",
-                                                            Schema<Any>().type("string").example("Unauthorized")
-                                                        )
-                                                        .addProperties(
-                                                            "message",
-                                                            Schema<Any>().type("string")
-                                                                .example("Authentication required")
-                                                        )
-                                                        .addProperties(
-                                                            "timestamp",
-                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        .properties(
+                                                            mapOf(
+                                                                "error" to Schema<Any>().type("string").example("Unauthorized"),
+                                                                "message" to Schema<Any>().type("string").example("Authentication required"),
+                                                                "timestamp" to Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                            )
                                                         )
                                                 )
                                         )
@@ -193,18 +187,12 @@ class OpenApiConfig {
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties(
-                                                            "error",
-                                                            Schema<Any>().type("string").example("Forbidden")
-                                                        )
-                                                        .addProperties(
-                                                            "message",
-                                                            Schema<Any>().type("string")
-                                                                .example("Insufficient permissions")
-                                                        )
-                                                        .addProperties(
-                                                            "timestamp",
-                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        .properties(
+                                                            mapOf(
+                                                                "error" to Schema<Any>().type("string").example("Forbidden"),
+                                                                "message" to Schema<Any>().type("string").example("Insufficient permissions"),
+                                                                "timestamp" to Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                            )
                                                         )
                                                 )
                                         )
@@ -219,17 +207,12 @@ class OpenApiConfig {
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties(
-                                                            "error",
-                                                            Schema<Any>().type("string").example("Not Found")
-                                                        )
-                                                        .addProperties(
-                                                            "message",
-                                                            Schema<Any>().type("string").example("Resource not found")
-                                                        )
-                                                        .addProperties(
-                                                            "timestamp",
-                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        .properties(
+                                                            mapOf(
+                                                                "error" to Schema<Any>().type("string").example("Not Found"),
+                                                                "message" to Schema<Any>().type("string").example("Resource not found"),
+                                                                "timestamp" to Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                            )
                                                         )
                                                 )
                                         )
@@ -244,24 +227,16 @@ class OpenApiConfig {
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties(
-                                                            "error",
-                                                            Schema<Any>().type("string").example("Bad Request")
-                                                        )
-                                                        .addProperties(
-                                                            "message",
-                                                            Schema<Any>().type("string").example("Validation failed")
-                                                        )
-                                                        .addProperties(
-                                                            "timestamp",
-                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
-                                                        )
-                                                        .addProperties(
-                                                            "errors",
-                                                            ArraySchema().items(Schema<Any>().type("string")).example(
-                                                                listOf(
-                                                                    "Name is required",
-                                                                    "Description cannot be empty"
+                                                        .properties(
+                                                            mapOf(
+                                                                "error" to Schema<Any>().type("string").example("Bad Request"),
+                                                                "message" to Schema<Any>().type("string").example("Validation failed"),
+                                                                "timestamp" to Schema<Any>().type("string").example("2024-01-15T10:30:00Z"),
+                                                                "errors" to ArraySchema().items(Schema<Any>().type("string")).example(
+                                                                    listOf(
+                                                                        "Name is required",
+                                                                        "Description cannot be empty"
+                                                                    )
                                                                 )
                                                             )
                                                         )
@@ -278,19 +253,12 @@ class OpenApiConfig {
                                                 .schema(
                                                     Schema<Any>()
                                                         .type("object")
-                                                        .addProperties(
-                                                            "error",
-                                                            Schema<Any>().type("string")
-                                                                .example("Internal Server Error")
-                                                        )
-                                                        .addProperties(
-                                                            "message",
-                                                            Schema<Any>().type("string")
-                                                                .example("An unexpected error occurred")
-                                                        )
-                                                        .addProperties(
-                                                            "timestamp",
-                                                            Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                        .properties(
+                                                            mapOf(
+                                                                "error" to Schema<Any>().type("string").example("Internal Server Error"),
+                                                                "message" to Schema<Any>().type("string").example("An unexpected error occurred"),
+                                                                "timestamp" to Schema<Any>().type("string").example("2024-01-15T10:30:00Z")
+                                                            )
                                                         )
                                                 )
                                         )

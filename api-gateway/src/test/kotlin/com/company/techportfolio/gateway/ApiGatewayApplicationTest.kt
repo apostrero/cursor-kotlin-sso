@@ -3,7 +3,10 @@ package com.company.techportfolio.gateway
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.web.client.RestTemplateBuilder
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Import
 import org.springframework.web.client.RestTemplate
 
 /**
@@ -32,10 +35,8 @@ import org.springframework.web.client.RestTemplate
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(ApiGatewayApplicationTest.TestConfig::class)
 class ApiGatewayApplicationTest {
-
-    @MockBean
-    private lateinit var restTemplate: RestTemplate
 
     /**
      * Tests that the Spring Boot application context loads successfully.
@@ -74,5 +75,18 @@ class ApiGatewayApplicationTest {
         assert(mainMethod != null)
         assert(mainMethod.parameterTypes.size == 1)
         assert(mainMethod.parameterTypes[0] == Array<String>::class.java)
+    }
+
+    @Configuration
+    class TestConfig {
+        @Bean
+        fun restTemplate(): RestTemplate {
+            return org.mockito.Mockito.mock(RestTemplate::class.java)
+        }
+        
+        @Bean
+        fun restTemplateBuilder(): RestTemplateBuilder {
+            return RestTemplateBuilder()
+        }
     }
 } 

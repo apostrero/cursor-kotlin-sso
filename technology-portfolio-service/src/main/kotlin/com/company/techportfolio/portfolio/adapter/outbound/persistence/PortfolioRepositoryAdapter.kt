@@ -295,18 +295,20 @@ class PortfolioRepositoryAdapter(
      * Retrieves all portfolio entities for the given owner, calculates
      * technology counts and total costs, and maps them to summary models.
      *
-     * @param ownerId The unique identifier of the owner
-     * @return Flux containing portfolio summaries owned by the user
+     * @param ownerId The unique identifier of the portfolio owner
+     * @return Flux containing portfolio summaries owned by the specified user
      */
     override fun findPortfolioSummariesByOwner(ownerId: Long): Flux<PortfolioSummary> {
         return portfolioJpaRepository.findByOwnerId(ownerId)
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e -> RuntimeException("Error finding portfolio summaries for owner $ownerId", e) }
     }
@@ -323,12 +325,14 @@ class PortfolioRepositoryAdapter(
     override fun findPortfolioSummariesByOrganization(organizationId: Long): Flux<PortfolioSummary> {
         return portfolioJpaRepository.findByOrganizationId(organizationId)
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e ->
                 RuntimeException(
@@ -350,12 +354,14 @@ class PortfolioRepositoryAdapter(
     override fun findPortfolioSummariesByType(type: PortfolioType): Flux<PortfolioSummary> {
         return portfolioJpaRepository.findByType(type)
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e -> RuntimeException("Error finding portfolio summaries for type $type", e) }
     }
@@ -372,12 +378,14 @@ class PortfolioRepositoryAdapter(
     override fun findPortfolioSummariesByStatus(status: PortfolioStatus): Flux<PortfolioSummary> {
         return portfolioJpaRepository.findByStatus(status)
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e -> RuntimeException("Error finding portfolio summaries for status $status", e) }
     }
@@ -393,12 +401,14 @@ class PortfolioRepositoryAdapter(
     override fun findAllPortfolioSummaries(): Flux<PortfolioSummary> {
         return portfolioJpaRepository.findByIsActiveTrue()
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e -> RuntimeException("Error finding all portfolio summaries", e) }
     }
@@ -423,12 +433,14 @@ class PortfolioRepositoryAdapter(
     ): Flux<PortfolioSummary> {
         return portfolioJpaRepository.searchPortfolios(name, type, status, organizationId)
             .flatMap { portfolio ->
-                Mono.zip(
-                    technologyJpaRepository.countByPortfolioId(portfolio.id!!),
-                    calculateTotalAnnualCost(portfolio.id!!)
-                ).map { tuple ->
-                    portfolio.toSummary(tuple.t1, tuple.t2)
-                }
+                portfolio.id?.let { portfolioId ->
+                    Mono.zip(
+                        technologyJpaRepository.countByPortfolioId(portfolioId),
+                        calculateTotalAnnualCost(portfolioId)
+                    ).map { tuple ->
+                        portfolio.toSummary(tuple.t1, tuple.t2)
+                    }
+                } ?: Mono.empty<PortfolioSummary>()
             }
             .onErrorMap { e -> RuntimeException("Error searching portfolios", e) }
     }

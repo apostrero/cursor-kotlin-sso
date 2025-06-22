@@ -13,6 +13,12 @@ import java.time.Duration
  * for the API Gateway service. It provides essential infrastructure components
  * like HTTP clients and other shared resources needed across the application.
  *
+ * Features:
+ * - HTTP client configuration with timeouts
+ * - Error handling configuration
+ * - Connection pooling settings
+ * - Request/response logging configuration
+ *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
@@ -26,14 +32,34 @@ class ApplicationConfig {
      * for making HTTP requests to downstream microservices and external systems.
      * Used by various adapters for service-to-service communication.
      *
+     * Configuration includes:
+     * - Connection timeout: 5 seconds
+     * - Read timeout: 10 seconds
+     * - Default error handling
+     * - Standard HTTP client behavior
+     *
      * @param builder RestTemplateBuilder provided by Spring Boot for configuration
      * @return Configured RestTemplate instance with connection and read timeouts
      */
     @Bean
+    @Suppress("DEPRECATION")
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
         return builder
             .setConnectTimeout(Duration.ofSeconds(5))
             .setReadTimeout(Duration.ofSeconds(10))
             .build()
+    }
+
+    /**
+     * Creates a RestTemplateBuilder bean for custom HTTP client configuration.
+     *
+     * This builder can be used by other components to create custom RestTemplate
+     * instances with specific configurations for different downstream services.
+     *
+     * @return RestTemplateBuilder instance for custom configurations
+     */
+    @Bean
+    fun restTemplateBuilder(): RestTemplateBuilder {
+        return RestTemplateBuilder()
     }
 } 

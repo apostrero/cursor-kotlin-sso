@@ -1,22 +1,24 @@
 package com.company.techportfolio.portfolio.adapter.inbound.web
 
+import com.company.techportfolio.portfolio.TechnologyPortfolioServiceApplication
 import com.company.techportfolio.portfolio.config.TestSecurityConfig
 import com.company.techportfolio.portfolio.domain.model.*
 import com.company.techportfolio.portfolio.domain.service.PortfolioService
 import com.company.techportfolio.shared.domain.model.*
+import com.company.techportfolio.shared.domain.port.EventPublisher
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.reset
-import org.mockito.Mockito.`when`
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.reactive.WebFluxTest
-import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Import
 import org.springframework.http.MediaType
 import org.springframework.security.oauth2.jwt.Jwt
@@ -27,6 +29,7 @@ import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import java.math.BigDecimal
 import java.time.LocalDateTime
+import org.springframework.web.bind.annotation.RequestMapping
 
 /**
  * Unit tests for PortfolioController.
@@ -58,21 +61,21 @@ import java.time.LocalDateTime
  * @see PortfolioService
  */
 @WebFluxTest(PortfolioController::class)
-@Import(PortfolioControllerTestExceptionHandler::class, TestSecurityConfig::class)
+@Import(TechnologyPortfolioServiceApplication::class, TestSecurityConfig::class, PortfolioControllerTest.TestConfig::class)
 @ActiveProfiles("test")
 class PortfolioControllerTest {
-
-    /**
-     * Mock of the domain service for portfolio operations.
-     */
-    @MockBean
-    private lateinit var portfolioService: PortfolioService
 
     /**
      * WebTestClient instance for reactive HTTP request testing.
      */
     @Autowired
     private lateinit var webTestClient: WebTestClient
+
+    /**
+     * Mock of the domain service for portfolio operations.
+     */
+    @Autowired
+    private lateinit var portfolioService: PortfolioService
 
     /**
      * ObjectMapper for JSON serialization/deserialization.
@@ -124,6 +127,48 @@ class PortfolioControllerTest {
     @BeforeEach
     fun setUp() {
         reset(portfolioService)
+    }
+
+    /**
+     * Simple test to verify the controller is being loaded.
+     */
+    @Test
+    fun `controller should be loaded`() {
+        // This test just verifies that the controller bean is being created
+        assert(::webTestClient.isInitialized)
+        assert(::portfolioService.isInitialized)
+        
+        // Verify that the service is properly mocked
+        whenever(portfolioService.createPortfolio(any())).thenReturn(Mono.empty())
+        
+        // Test that the controller can be instantiated
+        val controller = PortfolioController(portfolioService)
+        
+        // Test that the controller has the correct request mapping
+        val requestMapping = controller.javaClass.getAnnotation(RequestMapping::class.java)
+        assert(requestMapping != null)
+        assert(requestMapping.value[0] == "/api/v1/portfolios")
+    }
+
+    @Configuration
+    class TestConfig {
+        @Bean
+        fun portfolioService(): PortfolioService {
+            return org.mockito.Mockito.mock(PortfolioService::class.java)
+        }
+        
+        @Bean
+        fun eventPublisher(): EventPublisher {
+            return object : EventPublisher {
+                override fun publish(event: com.company.techportfolio.shared.domain.event.DomainEvent): Mono<Void> {
+                    return Mono.empty()
+                }
+
+                override fun publishAll(events: List<com.company.techportfolio.shared.domain.event.DomainEvent>): Mono<Void> {
+                    return Mono.empty()
+                }
+            }
+        }
     }
 
     /**
@@ -197,7 +242,7 @@ class PortfolioControllerTest {
         val portfolioId = 1L
         val expectedResponse = createTestPortfolioResponse(portfolioId, "Test Portfolio")
 
-        `when`(portfolioService.getPortfolio(portfolioId)).thenReturn(Mono.just(expectedResponse))
+        whenever(portfolioService.getPortfolio(portfolioId)).thenReturn(Mono.just(expectedResponse))
 
         // When & Then
         webTestClient.get()
@@ -226,7 +271,7 @@ class PortfolioControllerTest {
         // Given
         val portfolioId = 999L
 
-        `when`(portfolioService.getPortfolio(portfolioId)).thenThrow(IllegalArgumentException("Portfolio not found"))
+        whenever(portfolioService.getPortfolio(portfolioId)).thenThrow(IllegalArgumentException("Portfolio not found"))
 
         // When & Then
         webTestClient.get()
@@ -288,7 +333,7 @@ class PortfolioControllerTest {
         // Given
         val portfolioId = 1L
 
-        `when`(portfolioService.deletePortfolio(portfolioId)).thenReturn(Mono.just(true))
+        whenever(portfolioService.deletePortfolio(portfolioId)).thenReturn(Mono.just(true))
 
         // When & Then
         webTestClient.delete()
@@ -312,7 +357,7 @@ class PortfolioControllerTest {
         // Given
         val portfolioId = 1L
 
-        `when`(portfolioService.deletePortfolio(portfolioId)).thenReturn(Mono.just(false))
+        whenever(portfolioService.deletePortfolio(portfolioId)).thenReturn(Mono.just(false))
 
         // When & Then - Controller currently ignores the boolean return value
         // and always returns 204 NO_CONTENT if no exception is thrown
@@ -356,7 +401,7 @@ class PortfolioControllerTest {
         val organizationId = 200L
         val expectedResponse = listOf(createTestPortfolioSummary(1L, "Org Portfolio"))
 
-        `when`(portfolioService.getPortfoliosByOrganization(organizationId)).thenReturn(
+        whenever(portfolioService.getPortfoliosByOrganization(organizationId)).thenReturn(
             Flux.fromIterable(
                 expectedResponse
             )
@@ -393,7 +438,7 @@ class PortfolioControllerTest {
         val organizationId = 200L
         val expectedResponse = listOf(createTestPortfolioSummary(1L, "Enterprise Portfolio"))
 
-        `when`(
+        whenever(
             portfolioService.searchPortfolios(
                 eq(name),
                 eq(type),
@@ -474,7 +519,7 @@ class PortfolioControllerTest {
         val technologyId = 1L
         val expectedResponse = createTestTechnologyResponse(technologyId, "Spring Boot")
 
-        `when`(portfolioService.getTechnology(technologyId)).thenReturn(Mono.just(expectedResponse))
+        whenever(portfolioService.getTechnology(technologyId)).thenReturn(Mono.just(expectedResponse))
 
         // When & Then
         webTestClient.get()
@@ -540,7 +585,7 @@ class PortfolioControllerTest {
         val portfolioId = 1L
         val technologyId = 10L
 
-        `when`(portfolioService.removeTechnology(portfolioId, technologyId)).thenReturn(Mono.just(true))
+        whenever(portfolioService.removeTechnology(portfolioId, technologyId)).thenReturn(Mono.just(true))
 
         // When & Then
         webTestClient.delete()
@@ -565,7 +610,7 @@ class PortfolioControllerTest {
         val portfolioId = 1L
         val technologyId = 10L
 
-        `when`(portfolioService.removeTechnology(portfolioId, technologyId)).thenReturn(Mono.just(false))
+        whenever(portfolioService.removeTechnology(portfolioId, technologyId)).thenReturn(Mono.just(false))
 
         // When & Then - Controller currently ignores the boolean return value
         // and always returns 204 NO_CONTENT if no exception is thrown
@@ -596,7 +641,7 @@ class PortfolioControllerTest {
             createTestTechnologySummary(2L, "PostgreSQL")
         )
 
-        `when`(portfolioService.getTechnologiesByPortfolio(portfolioId)).thenReturn(Flux.fromIterable(expectedResponse))
+        whenever(portfolioService.getTechnologiesByPortfolio(portfolioId)).thenReturn(Flux.fromIterable(expectedResponse))
 
         // When & Then
         webTestClient.get()

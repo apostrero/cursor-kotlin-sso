@@ -46,10 +46,10 @@ class EventStreamController(
     private val recentEvents = ConcurrentHashMap<String, DomainEvent>()
 
     /**
-     * Streams domain events as Server-Sent Events (SSE).
+     * Streams events as Server-Sent Events (SSE).
      *
      * Provides a reactive stream of domain events for real-time monitoring
-     * and integration purposes. Events are streamed as they occur.
+     * and updates. Events are streamed every 2 seconds with proper error handling.
      *
      * @return Flux<String> with SSE-formatted event data
      */
@@ -57,7 +57,7 @@ class EventStreamController(
     @PreAuthorize("hasRole('ADMIN')")
     fun streamEvents(): Flux<String> {
         return Flux.interval(Duration.ofSeconds(2))
-            .map { tick ->
+            .map { _ ->
                 val event = createTestEvent()
                 recentEvents[event.eventId] = event
                 "data: ${event.toJson()}\n\n"
@@ -80,7 +80,7 @@ class EventStreamController(
     @PreAuthorize("hasRole('ADMIN')")
     fun streamPortfolioEvents(): Flux<String> {
         return Flux.interval(Duration.ofSeconds(3))
-            .map { tick ->
+            .map { _ ->
                 val event = createPortfolioEvent()
                 recentEvents[event.eventId] = event
                 "data: ${event.toJson()}\n\n"
@@ -108,7 +108,7 @@ class EventStreamController(
         logger.info("Client connected to event stream for type: $eventType")
 
         return Flux.interval(Duration.ofSeconds(2))
-            .map { tick ->
+            .map { _ ->
                 val event = createEventByType(eventType)
                 recentEvents[event.eventId] = event
                 "data: ${event.toJson()}\n\n"

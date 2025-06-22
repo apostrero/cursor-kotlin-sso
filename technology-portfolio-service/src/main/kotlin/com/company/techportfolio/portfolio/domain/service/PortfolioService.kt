@@ -83,31 +83,28 @@ class PortfolioService(
     private val logger: Logger = LoggerFactory.getLogger(PortfolioService::class.java)
 
     /**
-     * Creates a new technology portfolio with validation and event publishing.
+     * Creates a new portfolio with validation and event publishing.
      *
-     * This method implements the portfolio creation use case with the following steps:
-     * 1. Validates that no portfolio exists with the same name
-     * 2. Creates a new portfolio entity with default active status
-     * 3. Persists the portfolio to the database
-     * 4. Publishes a PortfolioCreatedEvent for integration
-     * 5. Returns a complete portfolio response with metadata
+     * This method implements the portfolio creation use case with comprehensive
+     * validation and business rule enforcement. It ensures unique portfolio names
+     * and publishes domain events for integration with other services.
      *
      * ## Business Rules:
-     * - Portfolio names must be unique across the system
-     * - New portfolios are created with ACTIVE status by default
-     * - Owner ID must be provided and valid
-     * - Organization ID is optional for personal portfolios
+     * - Portfolio name must be unique within the organization
+     * - Portfolio is created with ACTIVE status by default
+     * - Creation timestamp is automatically set
+     * - Domain event is published upon successful creation
      *
      * **Reactive**: Returns Mono<PortfolioResponse>
      *
-     * @param request The portfolio creation request containing required data
-     * @return Mono<PortfolioResponse> with complete portfolio information
+     * @param request The portfolio creation request with required data
+     * @return Mono<PortfolioResponse> with created portfolio information
      * @throws RuntimeException if portfolio creation fails or name already exists
      * @throws IllegalArgumentException if request data is invalid
      */
     fun createPortfolio(request: CreatePortfolioRequest): Mono<PortfolioResponse> {
         return portfolioRepository.findByName(request.name)
-            .flatMap { existingPortfolio ->
+            .flatMap { _ ->
                 Mono.error<PortfolioResponse>(
                     IllegalArgumentException("Portfolio with name '${request.name}' already exists")
                 )
@@ -308,25 +305,25 @@ class PortfolioService(
     }
 
     /**
-     * Adds a new technology to an existing portfolio.
+     * Adds a new technology to an existing portfolio with validation.
      *
-     * This method implements the technology addition use case with validation
-     * and cost tracking. The technology is associated with the specified portfolio
-     * and includes comprehensive metadata for lifecycle management.
+     * This method implements the technology addition use case with comprehensive
+     * validation to ensure the portfolio exists before adding the technology.
+     * An event is published upon successful addition for integration purposes.
      *
      * ## Business Rules:
-     * - Portfolio must exist before adding technologies
-     * - Technology names should be unique within a portfolio
-     * - Cost information is optional but recommended for tracking
-     * - New technologies are created with active status
+     * - Portfolio must exist before adding technology
+     * - Technology is created with ACTIVE status by default
+     * - Creation timestamp is automatically set
+     * - Domain event is published upon successful addition
      *
      * **Reactive**: Returns Mono<TechnologyResponse>
      *
      * @param portfolioId The ID of the portfolio to add the technology to
      * @param request The technology creation request with required data
-     * @return Mono<TechnologyResponse> with complete technology information
+     * @return Mono<TechnologyResponse> with created technology information
      * @throws RuntimeException if technology addition fails
-     * @throws IllegalArgumentException if portfolio doesn't exist
+     * @throws IllegalArgumentException if portfolio doesn't exist or request data is invalid
      */
     fun addTechnology(portfolioId: Long, request: AddTechnologyRequest): Mono<TechnologyResponse> {
         return portfolioRepository.findById(portfolioId)
@@ -335,7 +332,7 @@ class PortfolioService(
                     IllegalArgumentException("Portfolio with id $portfolioId not found")
                 )
             )
-            .flatMap { portfolio ->
+            .flatMap { _ ->
                 val technology = Technology(
                     name = request.name,
                     description = request.description,
@@ -565,7 +562,7 @@ class PortfolioService(
                     IllegalArgumentException("Portfolio with id $portfolioId not found")
                 )
             )
-            .flatMap { portfolio ->
+            .flatMap { _ ->
                 technologyRepository.countByPortfolioId(portfolioId)
                     .flatMap { technologyCount ->
                         if (technologyCount > 0) {

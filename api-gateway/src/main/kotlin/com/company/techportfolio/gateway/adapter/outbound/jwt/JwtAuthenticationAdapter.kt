@@ -82,6 +82,7 @@ class JwtAuthenticationAdapter : AuthenticationPort {
         return try {
             val claims = getClaimsFromToken(token)
             val username = claims.subject
+            @Suppress("UNCHECKED_CAST")
             val authorities = claims["authorities"] as? List<String> ?: emptyList()
             val sessionIndex = claims["sessionIndex"] as? String
             val issuedAt = claims.issuedAt.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime()
@@ -96,6 +97,7 @@ class JwtAuthenticationAdapter : AuthenticationPort {
             // Handle expired token specifically - extract claims from the exception
             val claims = e.claims
             val username = claims.subject
+            @Suppress("UNCHECKED_CAST")
             val authorities = claims["authorities"] as? List<String> ?: emptyList()
             val sessionIndex = claims["sessionIndex"] as? String
             TokenValidationResult.expired(username, authorities, sessionIndex)
@@ -117,6 +119,7 @@ class JwtAuthenticationAdapter : AuthenticationPort {
         return try {
             val claims = getClaimsFromToken(token)
             val username = claims.subject
+            @Suppress("UNCHECKED_CAST")
             val authorities = claims["authorities"] as? List<String> ?: emptyList()
             val sessionIndex = claims["sessionIndex"] as? String
 

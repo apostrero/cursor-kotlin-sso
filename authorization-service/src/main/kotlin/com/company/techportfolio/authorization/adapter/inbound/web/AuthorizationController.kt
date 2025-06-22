@@ -144,6 +144,7 @@ class AuthorizationController(
         @RequestBody request: Map<String, Any>
     ): Mono<ResponseEntity<Boolean>> {
         val username = request["username"] as String
+        @Suppress("UNCHECKED_CAST")
         val roles = request["roles"] as List<String>
 
         return Mono.fromCallable<Boolean> { authorizationService.hasAnyRole(username, roles) }

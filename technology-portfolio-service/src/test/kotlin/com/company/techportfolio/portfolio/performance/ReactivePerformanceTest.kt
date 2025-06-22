@@ -27,11 +27,14 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import org.springframework.web.reactive.function.BodyInserters
 import java.math.BigDecimal
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.system.measureTimeMillis
+import reactor.core.publisher.Mono
+import reactor.test.StepVerifier
 
 /**
  * Performance testing for reactive Technology Portfolio Service.
@@ -139,9 +142,9 @@ class ReactivePerformanceTest {
                 .expectStatus().isCreated
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody
 
-            assertNotNull(response.id)
+            assertNotNull(response?.id)
         }
 
         logger.info("Single portfolio creation time: ${singleCreationTime}ms")
@@ -152,7 +155,7 @@ class ReactivePerformanceTest {
         val batchCreationTime = measureTimeMillis {
             val portfolios = (1..batchSize).map { i ->
                 val request = createPortfolioRequest.copy(name = "Batch Portfolio $i")
-                webTestClient.post()
+                val response = webTestClient.post()
                     .uri("/api/v1/portfolios")
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(BodyInserters.fromValue(request))
@@ -160,7 +163,9 @@ class ReactivePerformanceTest {
                     .expectStatus().isCreated
                     .expectBody(PortfolioResponse::class.java)
                     .returnResult()
-                    .responseBody!!
+                    .responseBody
+                
+                response ?: throw AssertionError("Portfolio creation failed for batch item $i")
             }
             assertEquals(batchSize, portfolios.size)
         }
@@ -196,9 +201,9 @@ class ReactivePerformanceTest {
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody
 
-            assertNotNull(response.id)
+            assertNotNull(response?.id)
         }
 
         logger.info("Single portfolio retrieval time: ${singleRetrievalTime}ms")
@@ -207,13 +212,15 @@ class ReactivePerformanceTest {
         // Test batch portfolio retrieval
         val batchRetrievalTime = measureTimeMillis {
             val portfolios = portfolioIds.map { id ->
-                webTestClient.get()
+                val response = webTestClient.get()
                     .uri("/api/v1/portfolios/$id")
                     .exchange()
                     .expectStatus().isOk
                     .expectBody(PortfolioResponse::class.java)
                     .returnResult()
-                    .responseBody!!
+                    .responseBody
+                
+                response ?: throw AssertionError("Portfolio retrieval failed for ID $id")
             }
             assertEquals(50, portfolios.size)
         }
@@ -262,42 +269,42 @@ class ReactivePerformanceTest {
         val portfolio = createPortfolioInDatabase()
 
         // Test 10 concurrent requests
-        val concurrent10Time = measureConcurrentRequests(10) { requestId ->
+        val concurrent10Time = measureConcurrentRequests(10) { _ ->
             webTestClient.get()
                 .uri("/api/v1/portfolios/${portfolio["id"]}")
                 .exchange()
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody ?: throw AssertionError("Portfolio retrieval failed")
         }
 
         logger.info("10 concurrent requests time: ${concurrent10Time}ms")
         assertTrue(concurrent10Time < 1000, "10 concurrent requests should complete within 1s")
 
         // Test 50 concurrent requests
-        val concurrent50Time = measureConcurrentRequests(50) { requestId ->
+        val concurrent50Time = measureConcurrentRequests(50) { _ ->
             webTestClient.get()
                 .uri("/api/v1/portfolios/${portfolio["id"]}")
                 .exchange()
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody ?: throw AssertionError("Portfolio retrieval failed")
         }
 
         logger.info("50 concurrent requests time: ${concurrent50Time}ms")
         assertTrue(concurrent50Time < 3000, "50 concurrent requests should complete within 3s")
 
         // Test 100 concurrent requests
-        val concurrent100Time = measureConcurrentRequests(100) { requestId ->
+        val concurrent100Time = measureConcurrentRequests(100) { _ ->
             webTestClient.get()
                 .uri("/api/v1/portfolios/${portfolio["id"]}")
                 .exchange()
                 .expectStatus().isOk
                 .expectBody(PortfolioResponse::class.java)
                 .returnResult()
-                .responseBody!!
+                .responseBody ?: throw AssertionError("Portfolio retrieval failed")
         }
 
         logger.info("100 concurrent requests time: ${concurrent100Time}ms")
@@ -324,9 +331,9 @@ class ReactivePerformanceTest {
                 .fetch()
                 .all()
                 .collectList()
-                .block()!!
+                .block()
 
-            assertTrue(portfolios.size <= 100)
+            assertTrue((portfolios?.size ?: 0) <= 100)
         }
 
         logger.info("Reactive database query time (100 records): ${queryTime}ms")
@@ -381,7 +388,6 @@ class ReactivePerformanceTest {
         }
 
         // Test streaming with backpressure - use more realistic expectations
-        var responseSize = 0
         val backpressureTime = measureTimeMillis {
             val result = webTestClient.mutate()
                 .responseTimeout(Duration.ofSeconds(30)) // Increase timeout
@@ -395,11 +401,11 @@ class ReactivePerformanceTest {
                 .returnResult()
 
             val response = result.responseBody ?: emptyList()
-            responseSize = response.size
+            val responseSize = response.size
             logger.info("Received $responseSize portfolios from backpressure test")
         }
 
-        logger.info("Backpressure handling time ($responseSize items): ${backpressureTime}ms")
+        logger.info("Backpressure handling time: ${backpressureTime}ms")
         assertTrue(backpressureTime < 35000, "Backpressure handling should complete within 35s")
 
         // Test memory usage (approximate)
@@ -439,9 +445,9 @@ class ReactivePerformanceTest {
                 .expectBodyList(Any::class.java)
                 .hasSize(100)
                 .returnResult()
-                .responseBody!!
+                .responseBody
 
-            assertEquals(100, response.size)
+            assertEquals(100, response?.size ?: 0)
         }
 
         logger.info("Parallel processing time: ${parallelTime}ms")
@@ -491,7 +497,7 @@ class ReactivePerformanceTest {
             // First, create tables if they don't exist
             createTablesIfNotExist()
 
-            // Then clean up data
+            // Then clean up data using reactive approach
             databaseClient.sql("DELETE FROM technologies").fetch().rowsUpdated().block()
             databaseClient.sql("DELETE FROM portfolios").fetch().rowsUpdated().block()
         } catch (e: Exception) {
@@ -630,7 +636,7 @@ class ReactivePerformanceTest {
         val results = mutableListOf<T>()
         val errors = AtomicInteger(0)
 
-        val startTime = System.currentTimeMillis()
+        val startTime = Instant.now()
 
         repeat(requestCount) { requestId ->
             Thread {
@@ -649,12 +655,12 @@ class ReactivePerformanceTest {
         }
 
         latch.await(30, TimeUnit.SECONDS)
-        val endTime = System.currentTimeMillis()
+        val endTime = Instant.now()
 
         assertEquals(0, errors.get(), "No requests should fail")
         assertEquals(requestCount, results.size, "All requests should complete")
 
-        return endTime - startTime
+        return Duration.between(startTime, endTime).toMillis()
     }
 
     private fun Row.toMap(): Map<String, Any?> {
