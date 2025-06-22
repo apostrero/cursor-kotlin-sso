@@ -7,6 +7,15 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
 
+/**
+ * @deprecated This configuration class is deprecated. Use ExternalizedGatewayConfig instead.
+ * Routes are now configured externally in application-{profile}.yml files under the
+ * `gateway.routes` property. This provides better flexibility and environment-specific
+ * routing configurations.
+ *
+ * See ExternalizedGatewayConfig for the new implementation.
+ */
+@Deprecated("Use ExternalizedGatewayConfig for externalized route configuration")
 @Configuration
 @Profile("!mock-auth")  // Only load when NOT in mock-auth mode
 @ConditionalOnProperty(name = ["spring.cloud.gateway.enabled"], havingValue = "true", matchIfMissing = true)
@@ -14,6 +23,9 @@ class GatewayConfig {
 
     /**
      * Configures custom routing rules for the API Gateway.
+     *
+     * @deprecated This method is deprecated. Routes are now configured externally.
+     * See ExternalizedGatewayConfig for the new implementation.
      *
      * Defines routing rules that map incoming HTTP requests to appropriate
      * backend microservices. Each route includes path matching, filters for
@@ -28,6 +40,7 @@ class GatewayConfig {
      * @param builder RouteLocatorBuilder for constructing routes
      * @return RouteLocator containing all configured routes
      */
+    @Deprecated("Use externalized route configuration instead")
     @Bean
     fun customRouteLocator(builder: RouteLocatorBuilder): RouteLocator {
         return builder.routes()

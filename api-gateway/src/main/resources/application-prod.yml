@@ -1,0 +1,262 @@
+# Production Environment Configuration
+# Profile: prod
+# Usage: --spring.profiles.active=prod
+
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: prod
+  cloud:
+    gateway:
+      enabled: true
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          simplesamlphp:
+            signing:
+              credentials:
+                - private-key-location: classpath:saml/saml-signing.key
+                  certificate-location: classpath:saml/saml-signing.crt
+            assertingparty:
+              metadata-uri: ${SAML_IDP_METADATA_URL:https://idp.company.com/simplesaml/saml2/idp/metadata.php}
+              entity-id: https://idp.company.com/simplesaml/saml2/idp/metadata.php
+              verification:
+                credentials:
+                  - certificate-location: classpath:saml/idp-verification.crt
+
+# HTTP Client Configuration for Production
+http:
+  client:
+    connect-timeout: 10  # Longer timeout for production stability
+    read-timeout: 30     # Extended timeout for production workloads
+
+# JWT Configuration for Production
+jwt:
+  secret: ${JWT_SECRET}  # Must be set via environment variable
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery (Production)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://prod-eureka.company.com:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Service URLs for Production Environment
+services:
+  authorization:
+    url: http://prod-auth.company.com:8080
+  audit:
+    url: http://prod-audit.company.com:8080
+  user-management:
+    url: http://prod-users.company.com:8080
+  timeout: 15s  # Production timeout
+
+# Logging for Production
+logging:
+  level:
+    com.company.techportfolio: WARN
+    org.springframework.security: ERROR
+    org.springframework.cloud.gateway: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# SAML Configuration for Production
+saml:
+  idp:
+    metadata-url: ${SAML_IDP_METADATA_URL:https://idp.company.com/simplesaml/saml2/idp/metadata.php}
+    entity-id: ${SAML_IDP_ENTITY_ID:https://idp.company.com/simplesaml/saml2/idp/metadata.php}
+  sp:
+    entity-id: ${SAML_SP_ENTITY_ID:https://gateway.company.com}
+    base-url: ${SAML_SP_BASE_URL:https://gateway.company.com}
+
+# Production-specific settings
+prod:
+  monitoring:
+    enabled: true
+    metrics-collection: true
+    alerting: true
+  security:
+    strict-ssl: true
+    cors:
+      allowed-origins: ["https://frontend.company.com"]
+    rate-limiting:
+      enabled: true
+      requests-per-minute: 1000
+  performance:
+    connection-pool-size: 50
+    max-connections: 200
+    keep-alive: true
+
+# Externalized Gateway Routes Configuration for Production
+gateway:
+  routes:
+    - id: technology-portfolio
+      path: /api/portfolio/**
+      uri: lb://technology-portfolio-service
+      order: 1
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/portfolio/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: prod
+        - type: add-request-header
+          args:
+            name: X-Request-ID
+            value: ${java.util.UUID.randomUUID()}
+        - type: circuit-breaker
+          args:
+            name: technology-portfolio-circuit-breaker
+        - type: retry
+          args:
+            retries: 3
+            statuses: 5XX,502,503,504
+      metadata:
+        service: technology-portfolio
+        environment: production
+        monitoring: enabled
+        circuit-breaker: enabled
+
+    - id: authorization
+      path: /api/auth/**
+      uri: lb://authorization-service
+      order: 2
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/auth/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: prod
+        - type: add-request-header
+          args:
+            name: X-Request-ID
+            value: ${java.util.UUID.randomUUID()}
+        - type: circuit-breaker
+          args:
+            name: authorization-circuit-breaker
+        - type: retry
+          args:
+            retries: 2
+            statuses: 5XX,502,503
+      metadata:
+        service: authorization
+        environment: production
+        monitoring: enabled
+        circuit-breaker: enabled
+
+    - id: user-management
+      path: /api/users/**
+      uri: lb://user-management-service
+      order: 3
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/users/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: prod
+        - type: add-request-header
+          args:
+            name: X-Request-ID
+            value: ${java.util.UUID.randomUUID()}
+        - type: circuit-breaker
+          args:
+            name: user-management-circuit-breaker
+        - type: retry
+          args:
+            retries: 2
+            statuses: 5XX,502,503
+      metadata:
+        service: user-management
+        environment: production
+        monitoring: enabled
+        circuit-breaker: enabled
+
+    - id: audit
+      path: /api/audit/**
+      uri: lb://audit-service
+      order: 4
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/audit/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: prod
+        - type: add-request-header
+          args:
+            name: X-Request-ID
+            value: ${java.util.UUID.randomUUID()}
+        - type: circuit-breaker
+          args:
+            name: audit-circuit-breaker
+        - type: retry
+          args:
+            retries: 1
+            statuses: 5XX
+      metadata:
+        service: audit
+        environment: production
+        monitoring: enabled
+        circuit-breaker: enabled
+
+    - id: dashboard
+      path: /dashboard/**
+      uri: https://frontend.company.com
+      order: 5
+      enabled: true
+      filters:
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: prod
+        - type: add-request-header
+          args:
+            name: X-Request-ID
+            value: ${java.util.UUID.randomUUID()}
+      metadata:
+        service: frontend
+        environment: production
+        monitoring: enabled 

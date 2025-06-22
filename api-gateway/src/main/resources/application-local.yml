@@ -1,0 +1,89 @@
+# Local Development Configuration
+# Profile: local
+# Usage: --spring.profiles.active=local
+
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: local
+  cloud:
+    gateway:
+      enabled: false  # Disable gateway in local mode for simplicity
+  security:
+    saml2:
+      relyingparty:
+        registration: {}  # Disable SAML in local mode
+  thymeleaf:
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+
+# HTTP Client Configuration for Local Development
+http:
+  client:
+    connect-timeout: 3  # Faster feedback for local development
+    read-timeout: 5     # Shorter timeout for local development
+
+# JWT Configuration for Local Development
+jwt:
+  secret: ${JWT_SECRET:local-dev-jwt-secret-key-512-bits-minimum-for-HS512-algorithm}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery (Local)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Service URLs for Local Development
+services:
+  authorization:
+    url: http://localhost:8082
+  audit:
+    url: http://localhost:8084
+  user-management:
+    url: http://localhost:8083
+  timeout: 5s
+
+# Logging for Local Development
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Mock Authentication Configuration
+mock:
+  auth:
+    enabled: true
+    login-page: /mock-login
+    success-url: /api/auth/mock-success
+    users:
+      - username: user1
+        password: password
+        roles: [ROLE_PORTFOLIO_MANAGER, READ_PORTFOLIO, WRITE_PORTFOLIO, VIEW_ANALYTICS]
+        email: user1@example.com
+        firstName: User1
+        lastName: MockUser
+      - username: user2
+        password: password
+        roles: [ROLE_VIEWER, READ_PORTFOLIO]
+        email: user2@example.com
+        firstName: User2
+        lastName: MockUser
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO, MANAGE_USERS, VIEW_ANALYTICS]
+        email: admin@example.com
+        firstName: Admin
+        lastName: MockUser 

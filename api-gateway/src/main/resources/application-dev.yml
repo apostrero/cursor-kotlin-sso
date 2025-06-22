@@ -1,0 +1,187 @@
+# Development Environment Configuration
+# Profile: dev
+# Usage: --spring.profiles.active=dev
+
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: dev
+  cloud:
+    gateway:
+      enabled: true
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          simplesamlphp:
+            signing:
+              credentials:
+                - private-key-location: classpath:saml/saml-signing.key
+                  certificate-location: classpath:saml/saml-signing.crt
+            assertingparty:
+              metadata-uri: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+              entity-id: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
+              verification:
+                credentials:
+                  - certificate-location: classpath:saml/idp-verification.crt
+
+# HTTP Client Configuration for Development
+http:
+  client:
+    connect-timeout: 5  # seconds
+    read-timeout: 10    # seconds
+
+# JWT Configuration for Development
+jwt:
+  secret: ${JWT_SECRET:dev-jwt-secret-key-512-bits-minimum-for-HS512-algorithm}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery (Development)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Service URLs for Development Environment
+services:
+  authorization:
+    url: http://localhost:8082
+  audit:
+    url: http://localhost:8084
+  user-management:
+    url: http://localhost:8083
+  timeout: 5s
+
+# Logging for Development
+logging:
+  level:
+    com.company.techportfolio: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# SAML Configuration for Development
+saml:
+  idp:
+    metadata-url: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+    entity-id: ${SAML_IDP_ENTITY_ID:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+  sp:
+    entity-id: ${SAML_SP_ENTITY_ID:http://localhost:8080}
+    base-url: ${SAML_SP_BASE_URL:http://localhost:8080}
+
+# Externalized Gateway Routes Configuration
+gateway:
+  routes:
+    - id: technology-portfolio
+      path: /api/portfolio/**
+      uri: lb://technology-portfolio-service
+      order: 1
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/portfolio/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: dev
+      metadata:
+        service: technology-portfolio
+        environment: development
+
+    - id: authorization
+      path: /api/auth/**
+      uri: lb://authorization-service
+      order: 2
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/auth/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: dev
+      metadata:
+        service: authorization
+        environment: development
+
+    - id: user-management
+      path: /api/users/**
+      uri: lb://user-management-service
+      order: 3
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/users/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: dev
+      metadata:
+        service: user-management
+        environment: development
+
+    - id: audit
+      path: /api/audit/**
+      uri: lb://audit-service
+      order: 4
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/audit/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: dev
+      metadata:
+        service: audit
+        environment: development
+
+    - id: dashboard
+      path: /dashboard/**
+      uri: http://localhost:3000
+      order: 5
+      enabled: true
+      filters:
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: dev
+      metadata:
+        service: frontend
+        environment: development 

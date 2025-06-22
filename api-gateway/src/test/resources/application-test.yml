@@ -1,3 +1,7 @@
+# Test Configuration for Unit and Integration Tests
+# Profile: test
+# Usage: --spring.profiles.active=test
+
 spring:
   main:
     allow-bean-definition-overriding: true
@@ -8,6 +12,10 @@ spring:
       enabled: false
     gateway:
       enabled: false
+  security:
+    saml2:
+      relyingparty:
+        registration: {}  # Disable SAML in tests
 
 # Test-specific service URLs
 services:
@@ -17,6 +25,7 @@ services:
     url: http://localhost:8084
   user-management:
     url: http://localhost:8083
+  timeout: 2s  # Very short timeout for tests
 
 # JWT settings for tests
 jwt:
@@ -39,13 +48,20 @@ management:
     health:
       enabled: true
 
-# Mock authentication settings
-mock-auth:
-  enabled: true
-  users:
-    - username: testuser
-      password: password
-      roles: [ROLE_USER, READ_PORTFOLIO]
-    - username: admin
-      password: secret
-      roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO] 
+# Mock authentication settings for tests
+mock:
+  auth:
+    enabled: true
+    users:
+      - username: testuser
+        password: password
+        roles: [ROLE_USER, READ_PORTFOLIO]
+        email: testuser@example.com
+        firstName: Test
+        lastName: User
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO]
+        email: admin@example.com
+        firstName: Admin
+        lastName: User 

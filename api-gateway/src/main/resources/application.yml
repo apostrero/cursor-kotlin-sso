@@ -1,5 +1,6 @@
-server:
-  port: 8080
+# Base Application Configuration
+# This file contains common configuration that applies to all environments
+# Environment-specific overrides are in application-{profile}.yml files
 
 spring:
   application:
@@ -20,39 +21,12 @@ spring:
           lower-case-service-id: true
       default-filters:
         - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials, RETAIN_FIRST
-  security:
-    saml2:
-      relyingparty:
-        registration:
-          simplesamlphp:
-            signing:
-              credentials:
-                - private-key-location: classpath:saml/saml-signing.key
-                  certificate-location: classpath:saml/saml-signing.crt
-            assertingparty:
-              metadata-uri: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
-              entity-id: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
-              verification:
-                credentials:
-                  - certificate-location: classpath:saml/idp-verification.crt
-  profiles:
-    active: dev
 
-# JWT Configuration
-jwt:
-  secret: ${JWT_SECRET:your-256-bit-secret-key-here-for-development-only}
-  expiration: 3600 # 1 hour in seconds
-
-# Eureka Service Discovery
-eureka:
+# HTTP Client Configuration
+http:
   client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-    register-with-eureka: true
-    fetch-registry: true
-  instance:
-    prefer-ip-address: true
-    health-check-url-path: /actuator/health
+    connect-timeout: 5  # seconds
+    read-timeout: 10    # seconds
 
 # Management and Monitoring
 management:
@@ -68,15 +42,6 @@ management:
       prometheus:
         enabled: true
 
-# Logging
-logging:
-  level:
-    com.company.techportfolio: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.cloud.gateway: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-
 # Circuit Breaker Configuration
 resilience4j:
   circuitbreaker:
@@ -88,4 +53,9 @@ resilience4j:
       technology-portfolio-service:
         sliding-window-size: 10
         failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s 
+        wait-duration-in-open-state: 30s
+
+# Default logging configuration
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n" 

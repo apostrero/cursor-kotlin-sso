@@ -1,5 +1,6 @@
 package com.company.techportfolio.gateway.config
 
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.web.client.RestTemplateBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
@@ -14,16 +15,26 @@ import java.time.Duration
  * like HTTP clients and other shared resources needed across the application.
  *
  * Features:
- * - HTTP client configuration with timeouts
+ * - HTTP client configuration with configurable timeouts
  * - Error handling configuration
  * - Connection pooling settings
  * - Request/response logging configuration
+ *
+ * Configuration properties:
+ * - http.client.connect-timeout: Connection timeout in seconds (default: 5)
+ * - http.client.read-timeout: Read timeout in seconds (default: 10)
  *
  * @author Technology Portfolio Team
  * @since 1.0.0
  */
 @Configuration
 class ApplicationConfig {
+
+    @Value("\${http.client.connect-timeout:5}")
+    private var connectTimeoutSeconds: Int = 5
+
+    @Value("\${http.client.read-timeout:10}")
+    private var readTimeoutSeconds: Int = 10
 
     /**
      * Creates a configured RestTemplate bean for HTTP client operations.
@@ -33,8 +44,8 @@ class ApplicationConfig {
      * Used by various adapters for service-to-service communication.
      *
      * Configuration includes:
-     * - Connection timeout: 5 seconds
-     * - Read timeout: 10 seconds
+     * - Configurable connection timeout (default: 5 seconds)
+     * - Configurable read timeout (default: 10 seconds)
      * - Default error handling
      * - Standard HTTP client behavior
      *
@@ -45,8 +56,8 @@ class ApplicationConfig {
     @Suppress("DEPRECATION")
     fun restTemplate(builder: RestTemplateBuilder): RestTemplate {
         return builder
-            .setConnectTimeout(Duration.ofSeconds(5))
-            .setReadTimeout(Duration.ofSeconds(10))
+            .setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds.toLong()))
+            .setReadTimeout(Duration.ofSeconds(readTimeoutSeconds.toLong()))
             .build()
     }
 

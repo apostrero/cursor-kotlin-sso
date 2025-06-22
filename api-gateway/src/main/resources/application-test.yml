@@ -1,0 +1,118 @@
+# Test Environment Configuration
+# Profile: test
+# Usage: --spring.profiles.active=test
+
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: test
+  cloud:
+    gateway:
+      enabled: false  # Disable gateway in test mode
+  security:
+    saml2:
+      relyingparty:
+        registration: {}  # Disable SAML in test mode
+  thymeleaf:
+    enabled: true
+    prefix: classpath:/templates/
+    suffix: .html
+    cache: false
+
+# JWT Configuration for Testing
+jwt:
+  secret: ${JWT_SECRET:test-jwt-secret-key-512-bits-minimum-for-HS512-algorithm}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery (Test)
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka/
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Service URLs for Test Environment
+services:
+  authorization:
+    url: http://localhost:8082
+  audit:
+    url: http://localhost:8084
+  user-management:
+    url: http://localhost:8083
+  timeout: 3s  # Shorter timeout for tests
+
+# Logging for Testing
+logging:
+  level:
+    com.company.techportfolio: INFO
+    org.springframework.security: INFO
+    org.springframework.cloud.gateway: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Mock Authentication Configuration for Tests
+mock:
+  auth:
+    enabled: true
+    login-page: /mock-login
+    success-url: /api/auth/mock-success
+    users:
+      - username: testuser
+        password: password
+        roles: [ROLE_USER, READ_PORTFOLIO]
+        email: testuser@example.com
+        firstName: Test
+        lastName: User
+      - username: admin
+        password: secret
+        roles: [ROLE_ADMIN, READ_PORTFOLIO, WRITE_PORTFOLIO, DELETE_PORTFOLIO]
+        email: admin@example.com
+        firstName: Admin
+        lastName: User
+
+# Externalized Gateway Routes Configuration for Test (minimal)
+gateway:
+  routes:
+    - id: technology-portfolio-test
+      path: /api/portfolio/**
+      uri: http://localhost:8083
+      order: 1
+      enabled: false  # Disabled in test mode
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/portfolio/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: test
+      metadata:
+        service: technology-portfolio
+        environment: test
+        testing: true
+
+    - id: authorization-test
+      path: /api/auth/**
+      uri: http://localhost:8082
+      order: 2
+      enabled: false  # Disabled in test mode
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/auth/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: test
+      metadata:
+        service: authorization
+        environment: test
+        testing: true 

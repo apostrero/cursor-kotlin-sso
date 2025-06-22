@@ -1,0 +1,246 @@
+# Docker Environment Configuration
+# Profile: docker
+# Usage: --spring.profiles.active=docker
+
+server:
+  port: 8080
+
+spring:
+  profiles:
+    active: docker
+  cloud:
+    gateway:
+      enabled: true
+  security:
+    saml2:
+      relyingparty:
+        registration:
+          simplesamlphp:
+            signing:
+              credentials:
+                - private-key-location: classpath:saml/saml-signing.key
+                  certificate-location: classpath:saml/saml-signing.crt
+            assertingparty:
+              metadata-uri: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+              entity-id: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
+              verification:
+                credentials:
+                  - certificate-location: classpath:saml/idp-verification.crt
+
+# JWT Configuration for Docker
+jwt:
+  secret: ${JWT_SECRET:docker-jwt-secret-key-512-bits-minimum-for-HS512-algorithm}
+  expiration: 3600 # 1 hour in seconds
+
+# Eureka Service Discovery (Docker)
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE:http://eureka-server:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
+    health-check-url-path: /actuator/health
+
+# Service URLs for Docker Environment
+services:
+  authorization:
+    url: http://authorization-service:8080
+  audit:
+    url: http://audit-service:8080
+  user-management:
+    url: http://user-management-service:8080
+  timeout: 10s
+
+# Logging for Docker
+logging:
+  level:
+    com.company.techportfolio: INFO
+    org.springframework.security: INFO
+    org.springframework.cloud.gateway: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# SAML Configuration for Docker
+saml:
+  idp:
+    metadata-url: ${SAML_IDP_METADATA_URL:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+    entity-id: ${SAML_IDP_ENTITY_ID:http://identity-provider:8080/simplesaml/saml2/idp/metadata.php}
+  sp:
+    entity-id: ${SAML_SP_ENTITY_ID:http://localhost:8081}
+    base-url: ${SAML_SP_BASE_URL:http://localhost:8081}
+
+# Redis Configuration for Docker
+spring:
+  redis:
+    host: ${REDIS_HOST:redis}
+    port: ${REDIS_PORT:6379}
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+
+# Externalized Gateway Routes Configuration for Docker
+gateway:
+  routes:
+    - id: technology-portfolio
+      path: /api/portfolio/**
+      uri: lb://technology-portfolio-service
+      order: 1
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/portfolio/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: docker
+        - type: add-request-header
+          args:
+            name: X-Container-ID
+            value: ${HOSTNAME:unknown}
+        - type: circuit-breaker
+          args:
+            name: technology-portfolio-circuit-breaker
+        - type: retry
+          args:
+            retries: 2
+            statuses: 5XX,502,503
+      metadata:
+        service: technology-portfolio
+        environment: docker
+        container: true
+
+    - id: authorization
+      path: /api/auth/**
+      uri: lb://authorization-service
+      order: 2
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/auth/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: docker
+        - type: add-request-header
+          args:
+            name: X-Container-ID
+            value: ${HOSTNAME:unknown}
+        - type: circuit-breaker
+          args:
+            name: authorization-circuit-breaker
+        - type: retry
+          args:
+            retries: 2
+            statuses: 5XX,502,503
+      metadata:
+        service: authorization
+        environment: docker
+        container: true
+
+    - id: user-management
+      path: /api/users/**
+      uri: lb://user-management-service
+      order: 3
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/users/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: docker
+        - type: add-request-header
+          args:
+            name: X-Container-ID
+            value: ${HOSTNAME:unknown}
+        - type: circuit-breaker
+          args:
+            name: user-management-circuit-breaker
+        - type: retry
+          args:
+            retries: 2
+            statuses: 5XX,502,503
+      metadata:
+        service: user-management
+        environment: docker
+        container: true
+
+    - id: audit
+      path: /api/audit/**
+      uri: lb://audit-service
+      order: 4
+      enabled: true
+      filters:
+        - type: rewrite-path
+          args:
+            regex: /api/audit/(?<segment>.*)
+            replacement: /\${segment}
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: docker
+        - type: add-request-header
+          args:
+            name: X-Container-ID
+            value: ${HOSTNAME:unknown}
+        - type: circuit-breaker
+          args:
+            name: audit-circuit-breaker
+        - type: retry
+          args:
+            retries: 1
+            statuses: 5XX
+      metadata:
+        service: audit
+        environment: docker
+        container: true
+
+    - id: dashboard
+      path: /dashboard/**
+      uri: http://frontend:3000
+      order: 5
+      enabled: true
+      filters:
+        - type: add-request-header
+          args:
+            name: X-Response-Time
+            value: ${System.currentTimeMillis()}
+        - type: add-request-header
+          args:
+            name: X-Environment
+            value: docker
+        - type: add-request-header
+          args:
+            name: X-Container-ID
+            value: ${HOSTNAME:unknown}
+      metadata:
+        service: frontend
+        environment: docker
+        container: true 
