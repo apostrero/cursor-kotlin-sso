@@ -1,18 +1,18 @@
 # Technology Portfolio SSO System - Docker Setup
 
-This document explains how to run the complete Technology Portfolio management system with SSO authentication using an **open source SimpleSAMLphp Identity Provider** via Docker Compose.
+This document explains how to run the complete Technology Portfolio management system with SSO authentication using an **open source SimpleSAMLphp Identity Provider** via Docker Compose, with support for both SAML SSO and Mock Authentication modes.
 
 ## 🎯 Overview
 
 The system includes:
-- **SimpleSAMLphp Identity Provider** (Open Source SAML IdP)
-- **API Gateway** with SAML authentication
-- **Authorization Service** for role-based access control
-- **Technology Portfolio Service** for portfolio management
-- **PostgreSQL databases** for data persistence
-- **Redis** for caching and session management
-- **Eureka** for service discovery
-- **Prometheus & Grafana** for monitoring
+- **SimpleSAMLphp Identity Provider** (Open Source SAML IdP) - Port 8080
+- **API Gateway** with SAML authentication - Port 8080 (SAML) / 8081 (Mock)
+- **Authorization Service** for role-based access control - Port 8082
+- **Technology Portfolio Service** for portfolio management with reactive programming - Port 8083
+- **PostgreSQL databases** for data persistence (Auth: 5432, Portfolio: 5433)
+- **Redis** for caching and session management - Port 6379
+- **Eureka** for service discovery - Port 8761
+- **Prometheus & Grafana** for monitoring - Ports 9090, 3000
 
 ## 🚀 Quick Start
 
@@ -24,15 +24,25 @@ The system includes:
 
 ### 1. Start the System
 
+#### Option A: SAML SSO Mode (Full SSO)
 ```bash
 # Make the startup script executable
 chmod +x docker-start.sh
 
-# Start all services
+# Start all services with SAML SSO
 ./docker-start.sh
 ```
 
-The script will:
+#### Option B: Mock Authentication Mode (Development)
+```bash
+# Make the startup script executable
+chmod +x docker-start-mock.sh
+
+# Start all services with Mock Authentication
+./docker-start-mock.sh
+```
+
+The scripts will:
 1. 🏗️ Start infrastructure services (databases, Redis, Eureka, IdP)
 2. 🔨 Build and start application services
 3. 📊 Start monitoring services
@@ -42,19 +52,19 @@ The script will:
 
 Once started, you can access:
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| 🔐 **SimpleSAMLphp IdP** | http://localhost:8080/simplesaml/ | Identity Provider |
-| 🚪 **API Gateway** | http://localhost:8081 | Main application entry point |
-| 🔒 **Authorization Service** | http://localhost:8082 | User authorization |
-| 📁 **Portfolio Service** | http://localhost:8083 | Technology portfolio management |
-| 🔍 **Eureka Discovery** | http://localhost:8761 | Service registry |
-| 📈 **Prometheus** | http://localhost:9090 | Metrics collection |
-| 📊 **Grafana** | http://localhost:3000 | Monitoring dashboards |
+| Service | SAML Mode | Mock Mode | Description |
+|---------|-----------|-----------|-------------|
+| 🔐 **SimpleSAMLphp IdP** | http://localhost:8080/simplesaml/ | N/A | Identity Provider |
+| 🚪 **API Gateway** | http://localhost:8080 | http://localhost:8081 | Main application entry point |
+| 🔒 **Authorization Service** | http://localhost:8082 | http://localhost:8082 | User authorization |
+| 📁 **Portfolio Service** | http://localhost:8083 | http://localhost:8083 | Technology portfolio management |
+| 🔍 **Eureka Discovery** | http://localhost:8761 | http://localhost:8761 | Service registry |
+| 📈 **Prometheus** | http://localhost:9090 | http://localhost:9090 | Metrics collection |
+| 📊 **Grafana** | http://localhost:3000 | http://localhost:3000 | Monitoring dashboards |
 
 ## 🔑 Test Users
 
-The SimpleSAMLphp Identity Provider comes pre-configured with test users:
+Both authentication modes use the same test users:
 
 | Username | Password | Role | Permissions |
 |----------|----------|------|-------------|
@@ -62,13 +72,13 @@ The SimpleSAMLphp Identity Provider comes pre-configured with test users:
 | `user2` | `password` | Viewer | Read-only access |
 | `admin` | `secret` | Administrator | Full system access |
 
-## 🧪 Testing SAML SSO
+## 🧪 Testing Authentication
 
-### Basic SSO Flow Test
+### SAML SSO Flow Test
 
 1. **Initiate Login**:
    ```
-   Visit: http://localhost:8081/saml/login
+   Visit: http://localhost:8080/saml/login
    ```
 
 2. **Identity Provider Redirect**:
@@ -81,17 +91,57 @@ The SimpleSAMLphp Identity Provider comes pre-configured with test users:
    - Click "Login"
 
 4. **Return to Application**:
-   - You'll be redirected back to: `http://localhost:8081`
+   - You'll be redirected back to: `http://localhost:8080`
+   - JWT token will be issued and stored
+   - User session will be established
+
+### Mock Authentication Flow Test
+
+1. **Access Mock Login**:
+   ```
+   Visit: http://localhost:8081/mock-login
+   ```
+
+2. **Authenticate**:
+   - Enter username: `user1`
+   - Enter password: `password`
+   - Click "Login"
+
+3. **Access Application**:
+   - You'll be redirected to: `http://localhost:8081`
    - JWT token will be issued and stored
    - User session will be established
 
 ### API Testing with Authentication
 
+#### SAML Mode
 ```bash
 # 1. Get SAML authentication (returns JWT token)
-curl -X POST http://localhost:8081/api/auth/saml \
+curl -X POST http://localhost:8080/api/auth/saml \
   -H "Content-Type: application/json" \
   -d '{"username": "user1"}'
+
+# 2. Use JWT token for API calls
+curl -X GET http://localhost:8080/api/portfolios \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+
+# 3. Test authorization
+curl -X POST http://localhost:8080/api/portfolios \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test Portfolio",
+    "description": "Created via API",
+    "portfolioType": "APPLICATION"
+  }'
+```
+
+#### Mock Mode
+```bash
+# 1. Get mock authentication (returns JWT token)
+curl -X POST http://localhost:8081/api/auth/mock-login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "user1", "password": "password"}'
 
 # 2. Use JWT token for API calls
 curl -X GET http://localhost:8081/api/portfolios \
@@ -116,20 +166,25 @@ The system uses environment variables for configuration. Key variables in `docke
 
 ```yaml
 # SimpleSAMLphp IdP Configuration
-SIMPLESAMLPHP_SP_ENTITY_ID: http://localhost:8081
-SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: http://localhost:8081/saml/acs
-SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE: http://localhost:8081/saml/logout
+SIMPLESAMLPHP_SP_ENTITY_ID: http://localhost:8080
+SIMPLESAMLPHP_SP_ASSERTION_CONSUMER_SERVICE: http://localhost:8080/saml/acs
+SIMPLESAMLPHP_SP_SINGLE_LOGOUT_SERVICE: http://localhost:8080/saml/logout
 SIMPLESAMLPHP_IDP_ADMIN_PASSWORD: admin123
 
 # API Gateway SAML Configuration  
 SAML_IDP_METADATA_URL: http://identity-provider:8080/simplesaml/saml2/idp/metadata.php
-SAML_SP_ENTITY_ID: http://localhost:8081
-SAML_SP_BASE_URL: http://localhost:8081
+SAML_SP_ENTITY_ID: http://localhost:8080
+SAML_SP_BASE_URL: http://localhost:8080
 
 # Database Configuration
 SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-auth:5432/authorization
 SPRING_DATASOURCE_USERNAME: auth_user
 SPRING_DATASOURCE_PASSWORD: auth_password
+
+# Technology Portfolio Service R2DBC Configuration
+SPRING_R2DBC_URL: r2dbc:postgresql://postgres-portfolio:5432/portfolio
+SPRING_R2DBC_USERNAME: portfolio_user
+SPRING_R2DBC_PASSWORD: portfolio_password
 ```
 
 ### Custom User Configuration
@@ -175,6 +230,9 @@ up{job="api-gateway"}
 
 # Database connections
 postgres_connections_active
+
+# R2DBC connections (Technology Portfolio Service)
+r2dbc_connections_active
 ```
 
 ### Grafana Dashboards
@@ -184,6 +242,7 @@ Access Grafana at http://localhost:3000 (admin/admin123):
 1. **Application Dashboard**: Service health, response times, error rates
 2. **Infrastructure Dashboard**: Database, Redis, system metrics
 3. **Security Dashboard**: Authentication events, authorization failures
+4. **Reactive Dashboard**: R2DBC connections, reactive streams metrics
 
 ## 🐛 Troubleshooting
 
@@ -210,7 +269,16 @@ docker-compose logs -f api-gateway
 curl http://localhost:8080/simplesaml/saml2/idp/metadata.php
 ```
 
-#### 3. Database Connection Issues
+#### 3. Mock Authentication Fails
+```bash
+# Check API Gateway logs
+docker-compose logs -f api-gateway
+
+# Verify mock login endpoint
+curl http://localhost:8081/api/auth/mock-users
+```
+
+#### 4. Database Connection Issues
 ```bash
 # Check database logs
 docker-compose logs -f postgres-auth
@@ -218,9 +286,19 @@ docker-compose logs -f postgres-portfolio
 
 # Test database connectivity
 docker-compose exec postgres-auth psql -U auth_user -d authorization -c "SELECT 1;"
+docker-compose exec postgres-portfolio psql -U portfolio_user -d portfolio -c "SELECT 1;"
 ```
 
-#### 4. Service Discovery Issues
+#### 5. R2DBC Connection Issues (Technology Portfolio Service)
+```bash
+# Check Technology Portfolio Service logs
+docker-compose logs -f technology-portfolio-service
+
+# Verify R2DBC configuration
+docker-compose exec technology-portfolio-service env | grep R2DBC
+```
+
+#### 6. Service Discovery Issues
 ```bash
 # Check Eureka dashboard
 open http://localhost:8761
@@ -266,11 +344,21 @@ This setup is configured for **development and testing**. For production:
    - Replace containerized databases with managed services
    - Implement proper backup strategies
 
+5. **Disable Mock Authentication**:
+   - Remove or disable mock authentication in production
+   - Use only SAML SSO for production environments
+
 ### SAML Security
 
 - SimpleSAMLphp uses default test certificates
 - For production, generate proper SAML signing certificates
 - Configure proper SP metadata with your IdP
+
+### R2DBC Security
+
+- Use connection pooling with proper limits
+- Implement connection encryption
+- Regular security updates for R2DBC drivers
 
 ## 🚀 Alternative Identity Providers
 
@@ -297,6 +385,7 @@ identity-provider:
 
 - [SimpleSAMLphp Documentation](https://simplesamlphp.org/docs/stable/)
 - [Spring Security SAML](https://docs.spring.io/spring-security/reference/servlet/saml2/index.html)
+- [Spring WebFlux & R2DBC](https://docs.spring.io/spring-framework/reference/web/webflux.html)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Prometheus Configuration](https://prometheus.io/docs/prometheus/latest/configuration/configuration/)
 
@@ -306,7 +395,7 @@ To contribute to this setup:
 
 1. Fork the repository
 2. Create a feature branch
-3. Test your changes with `./docker-start.sh`
+3. Test your changes with `./docker-start.sh` or `./docker-start-mock.sh`
 4. Submit a pull request
 
 ## 📝 License

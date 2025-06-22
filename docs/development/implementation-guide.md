@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides a comprehensive guide for implementing a microservices-based Technology Portfolio Management System with SSO authentication using Ping Federated Identity Provider and SAML, following hexagonal architecture principles.
+This document provides a comprehensive guide for implementing a microservices-based Technology Portfolio Management System with SSO authentication using Ping Federated Identity Provider and SAML, following hexagonal architecture principles with reactive programming support.
 
 ## Architecture Overview
 
@@ -13,16 +13,20 @@ This document provides a comprehensive guide for implementing a microservices-ba
    - JWT token generation and validation
    - Request routing and load balancing
    - Rate limiting and security
+   - Mock authentication mode for development
 
-2. **Authorization Service** (Port 8081)
+2. **Authorization Service** (Port 8082)
    - User authorization and role management
    - Permission validation
    - User profile management
+   - Reactive web endpoints
 
 3. **Technology Portfolio Service** (Port 8082)
-   - Portfolio management
+   - Portfolio management with reactive programming
    - Technology tracking
    - Cost analysis and reporting
+   - Event streaming capabilities
+   - R2DBC database integration
 
 4. **Shared Module**
    - Domain models and enums
@@ -32,15 +36,17 @@ This document provides a comprehensive guide for implementing a microservices-ba
 
 ### Technology Stack
 
-- **Framework**: Spring Boot 3.4
-- **Language**: Kotlin
+- **Framework**: Spring Boot 3.4.0
+- **Language**: Kotlin 1.9.22
+- **Java Version**: 21
 - **Build Tool**: Gradle
-- **Database**: PostgreSQL
+- **Database**: PostgreSQL with R2DBC (Technology Portfolio Service), JPA (Authorization Service)
 - **Authentication**: SAML 2.0 with Ping Federated
 - **Architecture**: Hexagonal Architecture (Ports & Adapters)
-- **Patterns**: CQRS, Event-Driven Architecture
+- **Patterns**: CQRS, Event-Driven Architecture, Reactive Programming
 - **Service Discovery**: Netflix Eureka
 - **Configuration**: Spring Cloud Config
+- **Testing**: TestContainers, MockK, JUnit 5, WebTestClient
 
 ## Project Structure
 
@@ -85,7 +91,8 @@ CursorKotlinSSO/
 **Status**: ✅ COMPLETED
 
 **Components Implemented**:
-- JPA entities for all services
+- JPA entities for Authorization Service
+- R2DBC entities for Technology Portfolio Service
 - Repository adapters implementing domain ports
 - Flyway database migrations
 - Database indexes and constraints
@@ -94,8 +101,10 @@ CursorKotlinSSO/
 **Database Migrations**:
 - `V1__Create_users_table.sql` - User management
 - `V2__Create_user_roles_table.sql` - Role assignments
+- `V3__Insert_default_data.sql` - Initial data
 - `V1__Create_portfolios_table.sql` - Portfolio management
 - `V2__Create_technologies_table.sql` - Technology tracking
+- `V3__Insert_sample_data.sql` - Sample data
 
 **Key Features**:
 - Optimized database schema
@@ -103,6 +112,7 @@ CursorKotlinSSO/
 - Foreign key constraints
 - Audit fields (created_at, updated_at)
 - Soft delete support
+- Reactive database operations (R2DBC)
 
 ### ✅ Phase 3: Comprehensive Tests (COMPLETED)
 
@@ -114,13 +124,20 @@ CursorKotlinSSO/
 - Repository adapter tests
 - Command handler tests
 - Event publisher tests
+- Reactive stream testing
+- Performance and load testing
 
 **Test Types Implemented**:
 - `PortfolioServiceTest` - Domain service unit tests
 - `AuthorizationServiceTest` - Authorization logic tests
 - `PortfolioControllerTest` - REST API integration tests
+- `ReactiveIntegrationTest` - Reactive integration tests
+- `ReactiveEndToEndTest` - End-to-end testing
+- `ReactivePerformanceTest` - Performance benchmarking
+- `ReactiveLoadTest` - Load testing (disabled by default)
 - Mock-based testing with MockK
 - TestContainers for database testing
+- WebTestClient for reactive HTTP testing
 
 **Key Features**:
 - 100% domain service coverage
@@ -128,6 +145,7 @@ CursorKotlinSSO/
 - Error handling validation
 - Business rule verification
 - Performance test preparation
+- Reactive stream testing with StepVerifier
 
 ### ✅ Phase 4: Event-Driven Patterns (COMPLETED)
 
@@ -144,6 +162,8 @@ CursorKotlinSSO/
 - Technology events (Added, Updated, Removed)
 - User events (Created, Updated, Login, Logout, RoleAssigned)
 - Cost management events (CostUpdated)
+- Assessment events (AssessmentCreated, AssessmentUpdated)
+- Authentication events (UserAuthenticated, UserLoggedOut)
 
 **Key Features**:
 - Decoupled event publishing
@@ -182,6 +202,31 @@ CursorKotlinSSO/
 - Reporting capabilities
 - Performance optimization
 
+### ✅ Phase 6: Reactive Programming (COMPLETED)
+
+**Status**: ✅ COMPLETED
+
+**Reactive Components**:
+- Technology Portfolio Service migrated to WebFlux
+- R2DBC database integration
+- Reactive repository interfaces
+- Reactive transaction management
+- Event streaming endpoints
+
+**Reactive Features**:
+- Non-blocking I/O operations
+- Backpressure handling
+- Reactive streams (Mono/Flux)
+- Reactive security integration
+- Reactive testing with WebTestClient
+
+**Key Features**:
+- Improved scalability
+- Better resource utilization
+- Event streaming capabilities
+- Reactive error handling
+- Performance optimization
+
 ## Current System State
 
 ### ✅ Fully Implemented Services
@@ -192,22 +237,26 @@ CursorKotlinSSO/
    - Request routing and security
    - Hexagonal architecture
    - Comprehensive configuration
+   - Mock authentication mode
 
 2. **Authorization Service**
    - User authorization logic
    - Role-based access control
    - User management
-   - Database persistence
+   - Database persistence (JPA)
    - Event publishing
    - Unit and integration tests
+   - Reactive web endpoints
 
 3. **Technology Portfolio Service**
-   - Portfolio CRUD operations
-   - Technology management
+   - Portfolio CRUD operations (reactive)
+   - Technology management (reactive)
    - Cost tracking and analysis
    - Search and filtering
    - Event-driven updates
    - Comprehensive test coverage
+   - R2DBC database integration
+   - Event streaming endpoints
 
 4. **Shared Module**
    - Domain models and enums
@@ -215,11 +264,14 @@ CursorKotlinSSO/
    - Event definitions
    - CQRS commands and queries
    - Common utilities
+   - Reactive support
 
 ### 🔧 Configuration and Deployment
 
 **Database Configuration**:
 - PostgreSQL with Flyway migrations
+- R2DBC for Technology Portfolio Service
+- JPA for Authorization Service
 - Optimized indexes and constraints
 - Connection pooling
 - Transaction management
@@ -229,12 +281,14 @@ CursorKotlinSSO/
 - JWT token validation
 - Role-based authorization
 - Secure communication
+- Reactive security integration
 
 **Monitoring and Observability**:
 - Spring Boot Actuator
 - Prometheus metrics
 - Health checks
 - Structured logging
+- Reactive monitoring
 
 ## Next Steps and Recommendations
 
@@ -302,6 +356,7 @@ CursorKotlinSSO/
    - Unit tests for all domain services
    - Integration tests for controllers
    - Repository tests with TestContainers
+   - Reactive stream testing with StepVerifier
    - Maintain >90% code coverage
 
 3. **Documentation Standards**
@@ -324,11 +379,80 @@ CursorKotlinSSO/
    - Use appropriate consistency levels
    - Implement proper error handling
 
-3. **Security Considerations**
+3. **Reactive Programming**
+   - Use Mono/Flux for reactive streams
+   - Implement proper error handling with onErrorMap
+   - Handle backpressure appropriately
+   - Use StepVerifier for testing reactive streams
+
+4. **Security Considerations**
    - Validate all inputs
    - Implement proper authorization
    - Use secure communication protocols
    - Follow OWASP guidelines
+
+## Testing Strategy
+
+### Unit Tests
+- **Domain Services**: Test business logic with mock adapters
+- **Adapters**: Test adapter implementations
+- **Ports**: Test interface contracts
+- **Reactive Services**: Test with StepVerifier
+
+### Integration Tests
+- **Controllers**: Test REST endpoints with WebTestClient
+- **Repository Adapters**: Test database operations with TestContainers
+- **Event Publishing**: Test event flow
+- **Reactive Streams**: Test with StepVerifier
+
+### Performance Tests
+- **Load Testing**: Simulate high concurrent load
+- **Performance Testing**: Benchmark response times
+- **Stress Testing**: Test system limits
+- **Memory Testing**: Monitor resource usage
+
+### Test Examples
+
+```kotlin
+// Reactive Domain Service Test
+@Test
+fun `createPortfolio should create portfolio successfully`() {
+    // Given
+    val request = CreatePortfolioRequest(name = "Test Portfolio", ...)
+    every { portfolioRepository.findByName(request.name) } returns Mono.empty()
+    every { portfolioRepository.save(any()) } returns Mono.just(portfolio)
+    
+    // When
+    val result = portfolioService.createPortfolio(request)
+    
+    // Then
+    StepVerifier.create(result)
+        .expectNextMatches { response ->
+            response.name == request.name
+        }
+        .verifyComplete()
+    
+    verify { eventPublisher.publish(any<PortfolioCreatedEvent>()) }
+}
+
+// Reactive Controller Test
+@Test
+@WithMockUser(roles = ["USER"])
+fun `createPortfolio should return 201 when portfolio is created successfully`() {
+    // Given
+    val request = CreatePortfolioRequest(...)
+    every { portfolioService.createPortfolio(any()) } returns Mono.just(response)
+    
+    // When & Then
+    webTestClient.post()
+        .uri("/api/v1/portfolios")
+        .contentType(MediaType.APPLICATION_JSON)
+        .bodyValue(request)
+        .exchange()
+        .expectStatus().isCreated
+        .expectBody()
+}
+```
 
 ## Troubleshooting
 
@@ -352,6 +476,12 @@ CursorKotlinSSO/
    - Monitor service availability
    - Review load balancing
 
+4. **Reactive Programming**
+   - Check for blocking operations
+   - Verify proper error handling
+   - Monitor backpressure
+   - Review reactive stream testing
+
 ### Performance Optimization
 
 1. **Database Performance**
@@ -366,6 +496,12 @@ CursorKotlinSSO/
    - Optimize JVM settings
    - Monitor memory usage
 
+3. **Reactive Performance**
+   - Monitor reactive streams
+   - Optimize backpressure handling
+   - Use appropriate schedulers
+   - Profile reactive operations
+
 ## Conclusion
 
 The Technology Portfolio SSO system is now fully implemented with all core features and follows modern microservices best practices. The system provides a solid foundation for managing technology portfolios with enterprise-grade security and scalability.
@@ -374,8 +510,9 @@ The implementation successfully demonstrates:
 - Hexagonal architecture principles
 - Event-driven design patterns
 - CQRS implementation
+- Reactive programming patterns
 - Comprehensive testing strategies
 - Security best practices
 - Scalable microservices design
 
-The system is ready for production deployment with proper configuration and monitoring setup. 
+The system is ready for production deployment with proper configuration and monitoring setup, supporting both traditional and reactive programming patterns for optimal performance and scalability. 

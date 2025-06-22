@@ -1,6 +1,6 @@
-# Shared Module - Correct Architecture Structure
+# Shared Module - Current Architecture Structure
 
-This document describes the corrected structure of the shared module, ensuring it only contains truly shared objects that are used across multiple microservices.
+This document describes the current structure of the shared module, ensuring it only contains truly shared objects that are used across multiple microservices.
 
 ## Architecture Principle
 
@@ -8,7 +8,7 @@ The shared module follows the **Single Responsibility Principle** for shared com
 - ✅ **Include**: Objects used by multiple microservices
 - ❌ **Exclude**: Objects specific to a single microservice
 
-## Corrected File Structure
+## Current File Structure
 
 ### Domain Models (`shared/src/main/kotlin/.../model/`)
 
@@ -24,7 +24,17 @@ model/
 ├── TechnologyPortfolio.kt            # Portfolio model (used by portfolio + shared events)
 ├── TechnologyDependency.kt           # Dependency model (used by portfolio + shared events)
 ├── TechnologyAssessment.kt           # Assessment model (used by portfolio + shared events)
-├── PortfolioAssessment.kt            # Assessment model (used by portfolio + shared events)
+└── PortfolioAssessment.kt            # Assessment model (used by portfolio + shared events)
+```
+
+**Note**: The enums are defined within `TechnologyPortfolio.kt` and also exist as separate files in `domain/model/` for better organization.
+
+### Domain Model Enums (`shared/src/main/kotlin/.../domain/model/`)
+
+**Shared Enums** - Used across multiple services:
+
+```
+domain/model/
 ├── AssessmentStatus.kt               # Shared assessment status enum
 ├── AssessmentType.kt                 # Shared assessment type enum
 ├── DependencyStrength.kt             # Shared dependency strength enum
@@ -33,7 +43,16 @@ model/
 ├── PortfolioStatus.kt                # Shared portfolio status enum
 ├── PortfolioType.kt                  # Shared portfolio type enum
 ├── RiskLevel.kt                      # Shared risk level enum
-└── TechnologyType.kt                 # Shared technology type enum
+├── TechnologyType.kt                 # Shared technology type enum
+├── User.kt                           # User domain model (duplicate for domain organization)
+├── Organization.kt                   # Organization model (duplicate for domain organization)
+├── Role.kt                          # Role model (duplicate for domain organization)
+├── Permission.kt                     # Permission model (duplicate for domain organization)
+├── Technology.kt                     # Technology model (duplicate for domain organization)
+├── TechnologyPortfolio.kt            # Portfolio model (duplicate for domain organization)
+├── TechnologyDependency.kt           # Dependency model (duplicate for domain organization)
+├── TechnologyAssessment.kt           # Assessment model (duplicate for domain organization)
+└── PortfolioAssessment.kt            # Assessment model (duplicate for domain organization)
 ```
 
 ### Shared Ports (`shared/src/main/kotlin/.../domain/port/`)
@@ -88,19 +107,23 @@ domain/cqrs/
 ## What Was Moved Out of Shared Module
 
 ### ❌ **Moved to Technology Portfolio Service**:
-The following repository interfaces were incorrectly placed in shared and have been moved to `technology-portfolio-service/src/main/kotlin/.../domain/port/`:
+The following repository interfaces were correctly moved to `technology-portfolio-service/src/main/kotlin/.../domain/port/`:
 
 - `TechnologyPortfolioRepository.kt` - Only used by portfolio service
 - `PortfolioAssessmentRepository.kt` - Assessment operations specific to portfolio service
 - `TechnologyAssessmentRepository.kt` - Assessment operations specific to portfolio service  
 - `TechnologyDependencyRepository.kt` - Dependency operations specific to portfolio service
-- `TechnologyRepository.kt` - Duplicate removed (already exists in portfolio service)
+- `TechnologyRepository.kt` - Technology operations specific to portfolio service
+- `TechnologyQueryRepository.kt` - Technology query operations specific to portfolio service
+- `PortfolioRepository.kt` - Portfolio CRUD operations specific to portfolio service
+- `PortfolioQueryRepository.kt` - Portfolio query operations specific to portfolio service
 
 ### ✅ **Correctly Remains in Shared Module**:
 
 - `UserRepository.kt` - Used by both authorization-service and api-gateway
 - `EventPublisher.kt` - Infrastructure interface used by all services
 - CQRS base classes - Used by all services implementing CQRS pattern
+- Domain models and enums - Used across multiple services
 
 ## Service-Specific Repository Interfaces
 
@@ -125,7 +148,7 @@ technology-portfolio-service/src/main/kotlin/.../domain/port/
 └── TechnologyDependencyRepository.kt # Technology dependency operations
 ```
 
-## Benefits of Correct Architecture
+## Benefits of Current Architecture
 
 ### 1. **True Separation of Concerns**
 - Shared module contains only cross-service dependencies
@@ -155,6 +178,7 @@ technology-portfolio-service/src/main/kotlin/.../domain/port/
 3. **Base Classes** for CQRS pattern (Command, Query, etc.)
 4. **Infrastructure Interfaces** used by all services (EventPublisher)
 5. **Cross-Service Repository Interfaces** (UserRepository used by auth + gateway)
+6. **Shared Enums** used across multiple services
 
 ### ❌ **Should NOT Be in Shared Module**:
 1. **Service-Specific Repository Interfaces** (PortfolioRepository only used by portfolio service)
@@ -185,6 +209,17 @@ import com.company.techportfolio.shared.domain.event.UserCreatedEvent
 import com.company.techportfolio.shared.domain.port.EventPublisher
 ```
 
+## Current Issues to Address
+
+### 1. **Duplicate Model Definitions**
+There are duplicate model definitions in both `model/` and `domain/model/` directories. This should be consolidated to avoid confusion.
+
+### 2. **Enum Organization**
+Enums are defined both within `TechnologyPortfolio.kt` and as separate files. This should be standardized for better maintainability.
+
+### 3. **Package Organization**
+Consider consolidating the model structure to avoid duplication and improve clarity.
+
 ## Future Considerations
 
 ### 1. **Shared Module Stability**
@@ -205,12 +240,18 @@ For cross-service data access:
 - Use REST APIs for synchronous queries
 - Avoid direct database access across service boundaries
 
+### 4. **Model Consolidation**
+Consider consolidating the duplicate model definitions:
+- Keep only one version of each model
+- Standardize enum organization
+- Improve package structure clarity
+
 ## Conclusion
 
-The corrected shared module structure ensures:
+The current shared module structure ensures:
 - **Clear Ownership**: Each service owns its specific interfaces
 - **Minimal Coupling**: Shared module contains only truly shared objects
 - **Better Maintainability**: Services can evolve independently
 - **Architectural Integrity**: Proper separation of concerns maintained
 
-This structure follows microservices best practices and makes the system more maintainable and scalable. 
+This structure follows microservices best practices and makes the system more maintainable and scalable. However, there are some areas for improvement in model organization and duplication that should be addressed in future iterations. 

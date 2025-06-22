@@ -28,9 +28,9 @@ The innermost layer containing business logic and domain models.
 #### Domain Models
 Each service has its own domain models:
 - **API Gateway**: AuthenticationResult, TokenValidationResult
-- **Authorization Service**: AuthorizationRequest, AuthorizationResult, User
-- **Technology Portfolio Service**: PortfolioRequest, TechnologyRequest, PortfolioResponse
-- **Shared Module**: User, TechnologyPortfolio, Technology (shared across services)
+- **Authorization Service**: AuthorizationRequest, AuthorizationResponse, UserPermissions
+- **Technology Portfolio Service**: CreatePortfolioRequest, UpdatePortfolioRequest, AddTechnologyRequest, PortfolioResponse, TechnologyResponse, PortfolioSummary, TechnologySummary
+- **Shared Module**: User, TechnologyPortfolio, Technology, TechnologyDependency, TechnologyAssessment, PortfolioAssessment, Organization, Role, Permission
 
 #### Domain Services
 - **API Gateway**: AuthenticationService
@@ -74,30 +74,37 @@ CursorKotlinSSO/
 │   │   │   └── service/                  # Domain Services
 │   │   │       └── AuthenticationService.kt
 │   │   ├── adapter/                      # Adapters Layer
-│   │   │   ├── in/                       # Inbound Adapters
+│   │   │   ├── inbound/                  # Inbound Adapters
 │   │   │   │   └── web/
-│   │   │   │       └── AuthenticationController.kt
-│   │   │   └── out/                      # Outbound Adapters
+│   │   │   │       ├── AuthenticationController.kt
+│   │   │   │       └── MockAuthController.kt
+│   │   │   └── outbound/                 # Outbound Adapters
 │   │   │       ├── jwt/
 │   │   │       │   └── JwtAuthenticationAdapter.kt
 │   │   │       ├── authorization/
 │   │   │       │   └── AuthorizationServiceAdapter.kt
-│   │   │       └── audit/
-│   │   │           └── AuditServiceAdapter.kt
+│   │   │       ├── audit/
+│   │   │       │   └── AuditServiceAdapter.kt
+│   │   │       └── event/
+│   │   │           └── EventPublisherAdapter.kt
+│   │   ├── service/                      # Additional Services
 │   │   └── config/                       # Configuration
-│   │       ├── SamlConfig.kt
+│   │       ├── ApplicationConfig.kt
 │   │       ├── GatewayConfig.kt
-│   │       └── ApplicationConfig.kt
+│   │       └── MockAuthConfig.kt
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── saml/                         # SAML certificates
+│       ├── application-mock-auth.yml
+│       └── templates/
+│           └── mock-login.html
 │
 ├── authorization-service/                 # Authorization Service
 │   ├── src/main/kotlin/com/company/techportfolio/authorization/
 │   │   ├── domain/                       # Domain Layer
 │   │   │   ├── model/                    # Domain Models
 │   │   │   │   ├── AuthorizationRequest.kt
-│   │   │   │   └── AuthorizationResult.kt
+│   │   │   │   ├── AuthorizationResponse.kt
+│   │   │   │   └── UserPermissions.kt
 │   │   │   ├── port/                     # Ports (Interfaces)
 │   │   │   │   ├── UserRepository.kt
 │   │   │   │   ├── RoleRepository.kt
@@ -105,26 +112,30 @@ CursorKotlinSSO/
 │   │   │   └── service/                  # Domain Services
 │   │   │       └── AuthorizationService.kt
 │   │   ├── adapter/                      # Adapters Layer
-│   │   │   ├── in/                       # Inbound Adapters
+│   │   │   ├── inbound/                  # Inbound Adapters
 │   │   │   │   └── web/
 │   │   │   │       └── AuthorizationController.kt
 │   │   │   └── out/                      # Outbound Adapters
-│   │   │       ├── persistence/          # Database Adapters
-│   │   │       │   ├── entity/
-│   │   │       │   │   ├── UserEntity.kt
-│   │   │       │   │   └── UserRoleEntity.kt
-│   │   │       │   ├── repository/
-│   │   │       │   │   ├── UserJpaRepository.kt
-│   │   │       │   │   └── UserRoleJpaRepository.kt
-│   │   │       │   └── UserRepositoryAdapter.kt
-│   │   │       └── event/                # Event Adapters
-│   │   │           └── EventPublisherAdapter.kt
-│   │   └── AuthorizationServiceApplication.kt
+│   │   │       └── persistence/          # Database Adapters
+│   │   │           ├── entity/
+│   │   │           │   ├── UserEntity.kt
+│   │   │           │   ├── RoleEntity.kt
+│   │   │           │   └── PermissionEntity.kt
+│   │   │           ├── repository/
+│   │   │           │   ├── UserJpaRepository.kt
+│   │   │           │   ├── RoleJpaRepository.kt
+│   │   │           │   └── PermissionJpaRepository.kt
+│   │   │           ├── UserRepositoryAdapter.kt
+│   │   │           ├── RoleRepositoryAdapter.kt
+│   │   │           └── PermissionRepositoryAdapter.kt
+│   │   └── config/                       # Configuration
+│   │       └── ReactiveConfig.kt
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/migration/                 # Database migrations
 │   │       ├── V1__Create_users_table.sql
-│   │       └── V2__Create_user_roles_table.sql
+│   │       ├── V2__Create_user_roles_table.sql
+│   │       └── V3__Insert_default_data.sql
 │   └── src/test/kotlin/                  # Comprehensive tests
 │       └── com/company/techportfolio/authorization/
 │           └── domain/service/
@@ -146,14 +157,20 @@ CursorKotlinSSO/
 │   │   │   │   ├── PortfolioRepository.kt
 │   │   │   │   ├── TechnologyRepository.kt
 │   │   │   │   ├── PortfolioQueryRepository.kt
-│   │   │   │   └── TechnologyQueryRepository.kt
+│   │   │   │   ├── TechnologyQueryRepository.kt
+│   │   │   │   ├── TechnologyDependencyRepository.kt
+│   │   │   │   ├── TechnologyAssessmentRepository.kt
+│   │   │   │   └── PortfolioAssessmentRepository.kt
 │   │   │   └── service/                  # Domain Services
 │   │   │       └── PortfolioService.kt
 │   │   ├── adapter/                      # Adapters Layer
-│   │   │   ├── in/                       # Inbound Adapters
+│   │   │   ├── inbound/                  # Inbound Adapters
 │   │   │   │   └── web/
-│   │   │   │       └── PortfolioController.kt
-│   │   │   └── out/                      # Outbound Adapters
+│   │   │   │       ├── PortfolioController.kt
+│   │   │   │       ├── EventStreamController.kt
+│   │   │   │       ├── FluxExamplesController.kt
+│   │   │   │       └── PortfolioControllerTestExceptionHandler.kt
+│   │   │   └── outbound/                 # Outbound Adapters
 │   │   │       ├── persistence/          # Database Adapters
 │   │   │       │   ├── entity/
 │   │   │       │   │   ├── PortfolioEntity.kt
@@ -161,21 +178,35 @@ CursorKotlinSSO/
 │   │   │       │   ├── repository/
 │   │   │       │   │   ├── PortfolioJpaRepository.kt
 │   │   │       │   │   └── TechnologyJpaRepository.kt
-│   │   │       │   └── PortfolioRepositoryAdapter.kt
+│   │   │       │   ├── PortfolioRepositoryAdapter.kt
+│   │   │       │   └── TechnologyRepositoryAdapter.kt
 │   │   │       └── event/                # Event Adapters
 │   │   │           └── EventPublisherAdapter.kt
+│   │   ├── config/                       # Configuration
+│   │   │   ├── OpenApiConfig.kt
+│   │   │   ├── ReactiveConfig.kt
+│   │   │   └── ReactiveMonitoringConfig.kt
 │   │   └── TechnologyPortfolioServiceApplication.kt
 │   ├── src/main/resources/
 │   │   ├── application.yml
 │   │   └── db/migration/                 # Database migrations
 │   │       ├── V1__Create_portfolios_table.sql
-│   │       └── V2__Create_technologies_table.sql
+│   │       ├── V2__Create_technologies_table.sql
+│   │       └── V3__Insert_sample_data.sql
 │   └── src/test/kotlin/                  # Comprehensive tests
 │       └── com/company/techportfolio/portfolio/
 │           ├── domain/service/
 │           │   └── PortfolioServiceTest.kt
-│           └── adapter/in/web/
-│               └── PortfolioControllerTest.kt
+│           ├── adapter/inbound/web/
+│           │   └── PortfolioControllerTest.kt
+│           ├── e2e/
+│           │   └── ReactiveEndToEndTest.kt
+│           ├── integration/
+│           │   └── ReactiveIntegrationTest.kt
+│           ├── load/
+│           │   └── ReactiveLoadTest.kt
+│           └── performance/
+│               └── ReactivePerformanceTest.kt
 │
 ├── shared/                               # Shared Module
 │   ├── src/main/kotlin/com/company/techportfolio/shared/
@@ -201,7 +232,6 @@ CursorKotlinSSO/
 │   │   │   │       ├── DependencyType.kt
 │   │   │   │       └── DependencyStrength.kt
 │   │   │   ├── port/                     # Shared CQRS Base & Cross-Service Interfaces
-│   │   │   │   ├── UserRepository.kt     # Used by authorization + api-gateway
 │   │   │   │   ├── EventPublisher.kt     # Shared infrastructure interface
 │   │   │   │   ├── Command.kt            # Base Command class
 │   │   │   │   ├── Query.kt              # Base Query class
@@ -228,8 +258,7 @@ CursorKotlinSSO/
 │   │   │       ├── PortfolioLifecycleCommandHandlers.kt
 │   │   │       ├── TechnologyCommandHandlers.kt
 │   │   │       └── BulkOperationCommandHandlers.kt
-│   │   └── port/                         # Event Publishing
-│   │       └── EventPublisher.kt
+│   │   └── model/                        # Additional Shared Models
 │   └── build.gradle.kts
 │
 ├── build.gradle.kts                      # Root build configuration
@@ -250,8 +279,8 @@ CursorKotlinSSO/
 - **Domain Models**: AuthenticationResult, TokenValidationResult
 - **Domain Service**: AuthenticationService
 - **Ports**: AuthenticationPort, AuthorizationPort, AuditPort
-- **Inbound Adapters**: AuthenticationController (REST endpoints)
-- **Outbound Adapters**: JWT adapter, Authorization service adapter, Audit service adapter
+- **Inbound Adapters**: AuthenticationController, MockAuthController (REST endpoints)
+- **Outbound Adapters**: JWT adapter, Authorization service adapter, Audit service adapter, Event publisher
 
 **Hexagonal Implementation**:
 ```kotlin
@@ -288,11 +317,11 @@ class JwtAuthenticationAdapter : AuthenticationPort {
 **Purpose**: User authorization and role-based access control
 
 **Key Components**:
-- **Domain Models**: AuthorizationRequest, AuthorizationResult, User
+- **Domain Models**: AuthorizationRequest, AuthorizationResponse, UserPermissions
 - **Domain Service**: AuthorizationService
 - **Ports**: UserRepository, RoleRepository, PermissionRepository
 - **Inbound Adapters**: AuthorizationController (REST endpoints)
-- **Outbound Adapters**: Database adapters, Event publisher
+- **Outbound Adapters**: Database adapters (User, Role, Permission repositories)
 
 **Hexagonal Implementation**:
 ```kotlin
@@ -300,27 +329,35 @@ class JwtAuthenticationAdapter : AuthenticationPort {
 @Service
 class AuthorizationService(
     private val userRepository: UserRepository,
-    private val eventPublisher: EventPublisher
+    private val roleRepository: RoleRepository,
+    private val permissionRepository: PermissionRepository
 ) {
-    fun authorize(request: AuthorizationRequest): AuthorizationResult {
+    fun authorize(request: AuthorizationRequest): AuthorizationResponse {
         // Business logic implementation
     }
 }
 
 // Port Interface
 interface UserRepository {
-    fun findById(id: Long): User?
+    fun findById(username: String): User?
     fun findByUsername(username: String): User?
+    fun findUserWithRolesAndPermissions(username: String): User?
+    fun findUserPermissions(username: String): List<String>
+    fun findUserRoles(username: String): List<String>
+    fun isUserActive(username: String): Boolean
+    fun findUserOrganization(username: String): Long?
     fun save(user: User): User
 }
 
 // Outbound Adapter
 @Repository
 class UserRepositoryAdapter(
-    private val userJpaRepository: UserJpaRepository
+    private val userJpaRepository: UserJpaRepository,
+    private val roleJpaRepository: RoleJpaRepository,
+    private val permissionJpaRepository: PermissionJpaRepository
 ) : UserRepository {
-    override fun findById(id: Long): User? {
-        return userJpaRepository.findById(id).orElse(null)?.toDomain()
+    override fun findById(username: String): User? {
+        return userJpaRepository.findByUsername(username)?.toDomain()
     }
 }
 ```
@@ -330,10 +367,10 @@ class UserRepositoryAdapter(
 **Purpose**: Portfolio and technology management
 
 **Key Components**:
-- **Domain Models**: PortfolioRequest, TechnologyRequest, PortfolioResponse, TechnologyResponse
+- **Domain Models**: CreatePortfolioRequest, UpdatePortfolioRequest, AddTechnologyRequest, PortfolioResponse, TechnologyResponse, PortfolioSummary, TechnologySummary
 - **Domain Service**: PortfolioService
-- **Ports**: PortfolioRepository, TechnologyRepository, PortfolioQueryRepository, TechnologyQueryRepository
-- **Inbound Adapters**: PortfolioController (REST endpoints)
+- **Ports**: PortfolioRepository, TechnologyRepository, PortfolioQueryRepository, TechnologyQueryRepository, TechnologyDependencyRepository, TechnologyAssessmentRepository, PortfolioAssessmentRepository
+- **Inbound Adapters**: PortfolioController, EventStreamController, FluxExamplesController (REST endpoints)
 - **Outbound Adapters**: Database adapters, Event publisher
 
 **Hexagonal Implementation**:
@@ -347,17 +384,17 @@ class PortfolioService(
     private val technologyQueryRepository: TechnologyQueryRepository,
     private val eventPublisher: EventPublisher
 ) {
-    fun createPortfolio(request: CreatePortfolioRequest): PortfolioResponse {
-        // Business logic implementation
+    fun createPortfolio(request: CreatePortfolioRequest): Mono<PortfolioResponse> {
+        // Reactive business logic implementation
     }
 }
 
 // Port Interface
 interface PortfolioRepository {
-    fun findById(id: Long): TechnologyPortfolio?
-    fun save(portfolio: TechnologyPortfolio): TechnologyPortfolio
-    fun update(portfolio: TechnologyPortfolio): TechnologyPortfolio
-    fun delete(id: Long): Boolean
+    fun findById(id: Long): Mono<TechnologyPortfolio?>
+    fun save(portfolio: TechnologyPortfolio): Mono<TechnologyPortfolio>
+    fun update(portfolio: TechnologyPortfolio): Mono<TechnologyPortfolio>
+    fun delete(id: Long): Mono<Boolean>
 }
 
 // Outbound Adapter
@@ -366,8 +403,8 @@ class PortfolioRepositoryAdapter(
     private val portfolioJpaRepository: PortfolioJpaRepository,
     private val technologyJpaRepository: TechnologyJpaRepository
 ) : PortfolioRepository, TechnologyRepository, PortfolioQueryRepository, TechnologyQueryRepository {
-    override fun findById(id: Long): TechnologyPortfolio? {
-        return portfolioJpaRepository.findById(id).orElse(null)?.toDomain()
+    override fun findById(id: Long): Mono<TechnologyPortfolio?> {
+        return portfolioJpaRepository.findById(id).map { it.toDomain() }
     }
 }
 ```
@@ -377,9 +414,9 @@ class PortfolioRepositoryAdapter(
 **Purpose**: Common domain models, interfaces, and utilities shared across services
 
 **Key Components**:
-- **Domain Models**: User, TechnologyPortfolio, Technology
-- **Enums**: PortfolioType, PortfolioStatus, TechnologyType, MaturityLevel, RiskLevel
-- **Events**: DomainEvent, PortfolioEvents, UserEvents
+- **Domain Models**: User, TechnologyPortfolio, Technology, TechnologyDependency, TechnologyAssessment, PortfolioAssessment, Organization, Role, Permission
+- **Enums**: PortfolioType, PortfolioStatus, TechnologyType, MaturityLevel, RiskLevel, AssessmentType, AssessmentStatus, DependencyType, DependencyStrength
+- **Events**: DomainEvent, AuthenticationEvents, AuthorizationEvents, AssessmentEvents, PortfolioLifecycleEvents, TechnologyEvents, PortfolioCostEvents, UserLifecycleEvents, UserSessionEvents, UserRoleEvents, UserPasswordEvents
 - **CQRS**: Commands, Queries, CommandHandlers, QueryHandlers
 - **Ports**: Repository interfaces, EventPublisher
 
@@ -430,11 +467,11 @@ class PortfolioRepositoryAdapter(
 fun `createPortfolio should create portfolio successfully`() {
     // Given
     val request = CreatePortfolioRequest(name = "Test Portfolio", ...)
-    every { portfolioRepository.findByName(request.name) } returns null
-    every { portfolioRepository.save(any()) } returns portfolio
+    every { portfolioRepository.findByName(request.name) } returns Mono.empty()
+    every { portfolioRepository.save(any()) } returns Mono.just(portfolio)
     
     // When
-    val result = portfolioService.createPortfolio(request)
+    val result = portfolioService.createPortfolio(request).block()
     
     // Then
     assertNotNull(result)
@@ -448,7 +485,7 @@ fun `createPortfolio should create portfolio successfully`() {
 fun `createPortfolio should return 201 when portfolio is created successfully`() {
     // Given
     val request = CreatePortfolioRequest(...)
-    every { portfolioService.createPortfolio(any()) } returns response
+    every { portfolioService.createPortfolio(any()) } returns Mono.just(response)
     
     // When & Then
     mockMvc.perform(post("/api/v1/portfolios")
@@ -465,14 +502,14 @@ All services implement event-driven patterns:
 ```kotlin
 // Domain Event
 data class PortfolioCreatedEvent(
-    override val id: String = UUID.randomUUID().toString(),
+    override val eventId: String = UUID.randomUUID().toString(),
     override val timestamp: LocalDateTime = LocalDateTime.now(),
-    override val eventType: String = "PortfolioCreated",
+    override val version: String = "1.0",
     val portfolioId: Long,
     val name: String,
     val ownerId: Long,
     val organizationId: Long?
-) : DomainEvent
+) : DomainEvent()
 
 // Event Publishing
 @Component
@@ -514,4 +551,31 @@ class CreatePortfolioCommandHandler(
 }
 ```
 
-This hexagonal architecture implementation provides a solid, scalable, and maintainable foundation for the Technology Portfolio SSO application across all microservices. 
+## Reactive Programming Support
+
+The Technology Portfolio Service implements reactive programming patterns:
+
+```kotlin
+// Reactive Domain Service
+@Service
+class PortfolioService(
+    private val portfolioRepository: PortfolioRepository,
+    private val eventPublisher: EventPublisher
+) {
+    fun createPortfolio(request: CreatePortfolioRequest): Mono<PortfolioResponse> {
+        return portfolioRepository.findByName(request.name)
+            .flatMap { existing ->
+                if (existing != null) {
+                    Mono.error(IllegalArgumentException("Portfolio with name ${request.name} already exists"))
+                } else {
+                    val portfolio = request.toDomain()
+                    portfolioRepository.save(portfolio)
+                        .map { it.toResponse() }
+                        .doOnSuccess { eventPublisher.publish(PortfolioCreatedEvent(...)) }
+                }
+            }
+    }
+}
+```
+
+This hexagonal architecture implementation provides a solid, scalable, and maintainable foundation for the Technology Portfolio SSO application across all microservices, with support for both traditional and reactive programming patterns. 

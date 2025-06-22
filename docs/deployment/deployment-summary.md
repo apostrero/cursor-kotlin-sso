@@ -24,6 +24,7 @@
   - PostgreSQL (portfolio): port 5433  
   - Redis: port 6379
   - Eureka: port 8761
+  - SimpleSAMLphp: port 8080
 - **Service startup scripts** working with proper dependency management
 
 #### 3. **Comprehensive Deployment Strategy** ✅
@@ -43,17 +44,18 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    Technology Portfolio System              │
 ├─────────────────────────────────────────────────────────────┤
-│  API Gateway (8081) ←→ Authorization Service (8082)        │
-│       ↓                        ↓                           │
-│  Portfolio Service (8083) ←→ Shared Domain Models          │
+│  API Gateway (8080) ←→ Authorization Service (8082)         │
+│       ↓                        ↓                            │
+│  Portfolio Service (8083) ←→ Shared Domain Models           │
 ├─────────────────────────────────────────────────────────────┤
 │  Infrastructure Services:                                   │
-│  • PostgreSQL (Auth DB) - Port 5432                       │
-│  • PostgreSQL (Portfolio DB) - Port 5433                  │
-│  • Redis (Cache) - Port 6379                              │
-│  • Eureka (Service Discovery) - Port 8761                 │
-│  • Prometheus (Metrics) - Port 9090                       │
-│  • Grafana (Dashboards) - Port 3000                       │
+│  • SimpleSAMLphp (IdP) - Port 8080                          │
+│  • PostgreSQL (Auth DB) - Port 5432                         │
+│  • PostgreSQL (Portfolio DB) - Port 5433                    │
+│  • Redis (Cache) - Port 6379                                │
+│  • Eureka (Service Discovery) - Port 8761                   │
+│  • Prometheus (Metrics) - Port 9090                         │
+│  • Grafana (Dashboards) - Port 3000                         │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -87,7 +89,7 @@ CursorKotlinSSO/
 
 ### 🔧 LOCAL Development
 - **Status**: ✅ Working
-- **Access**: http://localhost:8081/mock-login
+- **Access**: http://localhost:8080/mock-login
 - **Database**: Docker containers with Flyway migrations
 - **Command**: `./run-local.sh`
 
@@ -196,12 +198,12 @@ cd environments/prod
 ```bash
 # Check infrastructure
 curl http://localhost:8761                    # Eureka
-curl http://localhost:8081/actuator/health    # API Gateway
+curl http://localhost:8080/actuator/health    # API Gateway
 curl http://localhost:8082/actuator/health    # Authorization Service
 curl http://localhost:8083/actuator/health    # Portfolio Service
 
 # Test authentication
-curl -X POST http://localhost:8081/api/auth/mock-login \
+curl -X POST http://localhost:8080/api/auth/mock-login \
   -H 'Content-Type: application/json' \
   -d '{"username": "user1", "password": "password"}'
 ```

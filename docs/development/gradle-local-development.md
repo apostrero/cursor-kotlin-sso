@@ -51,7 +51,7 @@ The local development setup includes:
 ### Application Services
 - **API Gateway** (port 8081) - Main entry point with mock authentication
 - **Authorization Service** (port 8082) - User permissions and roles
-- **Technology Portfolio Service** (port 8083) - Portfolio management
+- **Technology Portfolio Service** (port 8083) - Portfolio management with reactive programming
 
 ## 🔧 Detailed Setup
 
@@ -216,6 +216,9 @@ For faster development cycles, you can use Spring Boot DevTools:
 ./gradlew :api-gateway:test
 ./gradlew :authorization-service:test
 ./gradlew :technology-portfolio-service:test
+
+# Run tests with comprehensive summary
+./gradlew test testSummary
 ```
 
 ### Database Migrations
@@ -273,6 +276,16 @@ pg_isready -h localhost -p 5433
 
 # Check database exists
 psql -h localhost -p 5432 -U auth_user -d authorization -c "SELECT 1;"
+psql -h localhost -p 5433 -U portfolio_user -d portfolio -c "SELECT 1;"
+```
+
+**R2DBC Connection Issues (Technology Portfolio Service)**
+```bash
+# Check Technology Portfolio Service logs
+tail -f logs/portfolio-service.log
+
+# Verify R2DBC configuration
+grep -r "R2DBC" logs/portfolio-service.log
 ```
 
 **Service Won't Start**
@@ -308,6 +321,7 @@ export JAVA_OPTS="-Xmx1024m -Xms512m"
 ### Development
 - `./gradlew clean build` - Clean and build all services
 - `./gradlew test` - Run all tests
+- `./gradlew testSummary` - Show comprehensive test summary
 - `./gradlew bootRun` - Run service (from service directory)
 
 ### Utility
